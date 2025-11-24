@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Layout from '@/components/Layout'
 import { useStore } from '@/store/useStore'
 import { Clock, Play, Pause, RotateCcw, CheckCircle2, BookOpen, GraduationCap, ClipboardList, TrendingUp, Target, Activity, Settings, X, Save } from 'lucide-react'
@@ -49,7 +49,7 @@ export default function EstudosPage() {
         clearInterval(intervalRef.current)
       }
     }
-  }, [isRunning, minutes])
+  }, [isRunning, minutes, handleTimerComplete])
 
   const handleTimerComplete = () => {
     setIsRunning(false)

@@ -631,7 +631,7 @@ export default function VersoesPage() {
                 </div>
               ) : (
                 <div className="p-4 bg-slate-700/30 rounded-lg border border-slate-600/50 border-dashed text-center text-slate-500 text-sm">
-                  Nenhum item no changelog. Clique em "Adicionar Item" para começar.
+                  Nenhum item no changelog. Clique em &quot;Adicionar Item&quot; para começar.
                 </div>
               )}
             </div>

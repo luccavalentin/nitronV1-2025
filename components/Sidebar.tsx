@@ -78,6 +78,7 @@ export default function Sidebar() {
     if (isEstudosActive && !estudosExpanded) {
       setEstudosExpanded(true)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEstudosActive])
 
   const handleToggleEstudos = useCallback((e: React.MouseEvent) => {

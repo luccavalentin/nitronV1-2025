@@ -22,6 +22,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         localStorage.setItem('nitronflow_initialized', 'true')
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (

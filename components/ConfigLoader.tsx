@@ -14,6 +14,7 @@ export default function ConfigLoader() {
     if (typeof window !== 'undefined') {
       loadConfiguracoes()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return null
