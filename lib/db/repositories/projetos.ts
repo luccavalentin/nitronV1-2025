@@ -122,7 +122,6 @@ export class ProjetosRepository {
       orcamento: row.orcamento ? parseFloat(row.orcamento) : undefined,
       dataInicio: row.data_inicio,
       roadmap: row.roadmap ? JSON.parse(row.roadmap) : undefined,
-      dataCriacao: row.data_criacao,
     }
   }
 }
