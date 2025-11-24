@@ -132,10 +132,6 @@ export default function ProjetosPage() {
   }
 
   const handleSalvar = () => {
-    if (!formData.nome || !formData.clienteId) {
-      alert('Por favor, preencha pelo menos o nome e selecione um cliente')
-      return
-    }
 
     if (modoCriacao) {
       const novoProjeto: Projeto = {
@@ -424,9 +420,10 @@ export default function ProjetosPage() {
               <input
                 type="text"
                 value={formData.nome || ''}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+                onChange={(e) => setFormData({ ...formData, nome: e.target.value.toUpperCase() })}
+                className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all uppercase"
                 placeholder="Nome do projeto"
+                style={{ textTransform: 'uppercase' }}
               />
             </div>
 
@@ -434,10 +431,11 @@ export default function ProjetosPage() {
               <label className="block text-slate-400 text-sm mb-2 font-medium">Descrição</label>
               <textarea
                 value={formData.descricao || ''}
-                onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, descricao: e.target.value.toUpperCase() })}
                 rows={4}
-                className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 resize-none transition-all"
+                className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 resize-none transition-all uppercase"
                 placeholder="Descrição do projeto..."
+                style={{ textTransform: 'uppercase' }}
               />
             </div>
 

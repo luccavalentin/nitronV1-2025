@@ -21,6 +21,7 @@ import {
   Clock,
   ChevronRight,
   ChevronDown,
+  X,
 } from 'lucide-react'
 
 const menuSections = [
@@ -46,6 +47,8 @@ const menuSections = [
     items: [
       { href: '/fincore', label: 'FINCORE', icon: DollarSign },
       { href: '/orcamentos', label: 'Orçamentos & Recibos', icon: FileText },
+      { href: '/acordos', label: 'Acordos', icon: FileText },
+      { href: '/gerenciador-parcelas', label: 'Gerenciador de Parcelas', icon: Calendar },
     ],
   },
   {
@@ -67,7 +70,12 @@ const menuSections = [
   },
 ]
 
-export default function Sidebar() {
+interface SidebarProps {
+  aberto?: boolean
+  onFechar?: () => void
+}
+
+export default function Sidebar({ aberto = true, onFechar }: SidebarProps) {
   const pathname = usePathname()
   const [estudosExpanded, setEstudosExpanded] = useState(false)
 
@@ -81,6 +89,13 @@ export default function Sidebar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEstudosActive])
 
+  // Fechar sidebar ao navegar em mobile
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024 && onFechar) {
+      onFechar()
+    }
+  }, [pathname, onFechar])
+
   const handleToggleEstudos = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -92,25 +107,48 @@ export default function Sidebar() {
     window.location.reload()
   }, [])
 
+  const handleLinkClick = useCallback(() => {
+    // Fechar sidebar em mobile ao clicar em um link
+    if (typeof window !== 'undefined' && window.innerWidth < 1024 && onFechar) {
+      onFechar()
+    }
+  }, [onFechar])
+
   return (
-    <div className="w-72 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 border-r border-slate-700/50 flex flex-col h-screen fixed left-0 top-0 z-40 shadow-2xl">
+    <div className={`
+      w-72 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 border-r border-slate-700/50 
+      flex flex-col h-screen fixed left-0 top-0 z-40 shadow-2xl
+      transform transition-transform duration-300 ease-in-out
+      lg:translate-x-0
+      ${aberto ? 'translate-x-0' : '-translate-x-full'}
+    `}>
       {/* Logo - Design Premium */}
-      <div className="p-6 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
+      <div className="p-4 sm:p-6 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
         <div className="flex items-center gap-3 mb-2">
           <div className="relative">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 via-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 border-2 border-blue-400/50 relative overflow-hidden group">
-              <span className="text-white font-bold text-lg relative z-10">NF</span>
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 via-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 border-2 border-blue-400/50 relative overflow-hidden group">
+              <span className="text-white font-bold text-base sm:text-lg relative z-10">NF</span>
               <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
             </div>
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full border-2 border-slate-900 shadow-lg animate-pulse">
+            <div className="absolute -top-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full border-2 border-slate-900 shadow-lg animate-pulse">
               <div className="absolute inset-0 bg-green-400 rounded-full animate-ping opacity-75"></div>
             </div>
           </div>
           <div className="flex-1">
-            <div className="text-white font-bold text-xl bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 bg-clip-text text-transparent">
+            <div className="text-white font-bold text-lg sm:text-xl bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 bg-clip-text text-transparent">
               NitronFlow
             </div>
           </div>
+          {/* Botão fechar para mobile */}
+          {onFechar && (
+            <button
+              onClick={onFechar}
+              className="lg:hidden p-2 hover:bg-slate-700/50 rounded-lg transition-colors"
+              aria-label="Fechar menu"
+            >
+              <X size={20} className="text-slate-300" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -156,7 +194,8 @@ export default function Sidebar() {
                             key={item.href}
                             href={item.href}
                             prefetch={true}
-                            className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-colors relative ${
+                            onClick={handleLinkClick}
+                            className={`group flex items-center gap-3 px-4 py-2 sm:py-3 rounded-xl transition-colors relative ${
                               isActive
                                 ? 'bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/10 border border-cyan-500/30'
                                 : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'
@@ -185,7 +224,8 @@ export default function Sidebar() {
                       key={item.href}
                       href={item.href}
                       prefetch={true}
-                      className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-colors relative ${
+                      onClick={handleLinkClick}
+                      className={`group flex items-center gap-3 px-4 py-2 sm:py-3 rounded-xl transition-colors relative ${
                         isActive
                           ? 'bg-gradient-to-r from-blue-500/20 via-cyan-500/20 to-blue-500/20 text-blue-400 shadow-lg shadow-blue-500/10 border border-blue-500/30'
                           : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'

@@ -2,16 +2,19 @@
 
 import { useState, useEffect } from 'react'
 import Layout from '@/components/Layout'
-import { useStore } from '@/store/useStore'
+import { useStore, CategoriaFinanceira } from '@/store/useStore'
 import { useAlert } from '@/hooks/useAlert'
-import { Save, User, Bell, Shield, Palette, Globe, Database, Mail, Key, Server, Monitor, Moon, Sun, Languages, Clock, BellOff, Eye, EyeOff, Lock, Unlock, Download, Upload, Trash2, RefreshCw } from 'lucide-react'
+import { Save, User, Bell, Shield, Palette, Globe, Database, Mail, Key, Server, Monitor, Moon, Sun, Languages, Clock, BellOff, Eye, EyeOff, Lock, Unlock, Download, Upload, Trash2, RefreshCw, Plus, Edit, Tag, TrendingUp, TrendingDown, X } from 'lucide-react'
 
 export default function ConfiguracoesPage() {
-  const { configuracoes, updateConfiguracoes, loadConfiguracoes, saveConfiguracoes } = useStore()
+  const { configuracoes, updateConfiguracoes, loadConfiguracoes, saveConfiguracoes, categoriasFinanceiras, addCategoriaFinanceira, updateCategoriaFinanceira, deleteCategoriaFinanceira } = useStore()
   const { showAlert, AlertComponent } = useAlert()
   const [localConfig, setLocalConfig] = useState(configuracoes)
   const [abaAtiva, setAbaAtiva] = useState('perfil')
   const [salvando, setSalvando] = useState(false)
+  const [mostrarModalCategoria, setMostrarModalCategoria] = useState(false)
+  const [categoriaEditando, setCategoriaEditando] = useState<string | null>(null)
+  const [formCategoria, setFormCategoria] = useState({ nome: '', descricao: '' })
 
   useEffect(() => {
     loadConfiguracoes()
@@ -489,6 +492,80 @@ export default function ConfiguracoesPage() {
                           </button>
                         </div>
                       </div>
+
+                      {/* Seção de Categorias */}
+                      <div className="pt-6 border-t border-slate-700/50">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h3 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
+                              <Tag className="text-blue-400" size={20} />
+                              Categorias de Receita e Despesa
+                            </h3>
+                            <p className="text-slate-400 text-sm">Gerencie as categorias financeiras do sistema</p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setFormCategoria({ nome: '', descricao: '' })
+                              setCategoriaEditando(null)
+                              setMostrarModalCategoria(true)
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded-xl transition-all font-medium shadow-lg shadow-blue-500/20"
+                          >
+                            <Plus size={18} />
+                            Nova Categoria
+                          </button>
+                        </div>
+
+                        {/* Lista de Categorias - Todas juntas */}
+                        <div className="space-y-2">
+                          {categoriasFinanceiras.length === 0 ? (
+                            <div className="p-4 bg-slate-700/20 rounded-xl border border-slate-600/30 text-center text-slate-400 text-sm">
+                              Nenhuma categoria cadastrada
+                            </div>
+                          ) : (
+                            categoriasFinanceiras.map((categoria) => (
+                              <div key={categoria.id} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-xl border border-slate-600/50 hover:border-blue-500/50 transition-colors">
+                                <div className="flex-1">
+                                  <div className="text-white font-medium">{categoria.nome}</div>
+                                  {categoria.descricao && (
+                                    <div className="text-slate-400 text-xs mt-1">{categoria.descricao}</div>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => {
+                                      setFormCategoria({ nome: categoria.nome, descricao: categoria.descricao || '' })
+                                      setCategoriaEditando(categoria.id)
+                                      setMostrarModalCategoria(true)
+                                    }}
+                                    className="p-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 text-blue-400 rounded-lg transition-colors"
+                                    title="Editar"
+                                  >
+                                    <Edit size={16} />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (confirm(`Tem certeza que deseja excluir a categoria "${categoria.nome}"?`)) {
+                                        deleteCategoriaFinanceira(categoria.id)
+                                        showAlert({
+                                          title: 'Sucesso!',
+                                          message: 'Categoria excluída com sucesso!',
+                                          type: 'success',
+                                          duration: 3000,
+                                        })
+                                      }
+                                    }}
+                                    className="p-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-red-400 rounded-lg transition-colors"
+                                    title="Excluir"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -510,6 +587,107 @@ export default function ConfiguracoesPage() {
         </div>
       </div>
       <AlertComponent />
+
+      {/* Modal de Categoria */}
+      {mostrarModalCategoria && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50 shadow-2xl max-w-md w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white">
+                {categoriaEditando ? 'Editar Categoria' : 'Criar Nova Categoria'}
+              </h3>
+              <button
+                onClick={() => {
+                  setMostrarModalCategoria(false)
+                  setFormCategoria({ nome: '', descricao: '' })
+                  setCategoriaEditando(null)
+                }}
+                className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors"
+              >
+                <X className="text-slate-400" size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-slate-400 text-sm mb-2 font-medium">Nome da Categoria</label>
+                <input
+                  type="text"
+                  value={formCategoria.nome}
+                  onChange={(e) => setFormCategoria({ ...formCategoria, nome: e.target.value.toUpperCase() })}
+                  className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all uppercase"
+                  placeholder="Ex: SALÁRIO, ALUGUEL, etc."
+                  autoFocus
+                  style={{ textTransform: 'uppercase' }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 text-sm mb-2 font-medium">Descrição (Opcional)</label>
+                <textarea
+                  value={formCategoria.descricao}
+                  onChange={(e) => setFormCategoria({ ...formCategoria, descricao: e.target.value.toUpperCase() })}
+                  rows={3}
+                  className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all uppercase"
+                  placeholder="Descrição da categoria..."
+                  style={{ textTransform: 'uppercase' }}
+                ></textarea>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setMostrarModalCategoria(false)
+                    setFormCategoria({ nome: '', descricao: '' })
+                    setCategoriaEditando(null)
+                  }}
+                  className="px-6 py-3 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 text-white rounded-xl transition-all font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    if (!formCategoria.nome.trim()) return
+                    
+                    if (categoriaEditando) {
+                      updateCategoriaFinanceira(categoriaEditando, {
+                        nome: formCategoria.nome.trim(),
+                        descricao: formCategoria.descricao.trim() || undefined,
+                      })
+                      showAlert({
+                        title: 'Sucesso!',
+                        message: 'Categoria atualizada com sucesso!',
+                        type: 'success',
+                        duration: 3000,
+                      })
+                    } else {
+                      addCategoriaFinanceira({
+                        id: `categoria-${Date.now()}`,
+                        nome: formCategoria.nome.trim(),
+                        descricao: formCategoria.descricao.trim() || undefined,
+                        dataCriacao: new Date(),
+                      })
+                      showAlert({
+                        title: 'Sucesso!',
+                        message: 'Categoria criada com sucesso!',
+                        type: 'success',
+                        duration: 3000,
+                      })
+                    }
+                    
+                    setMostrarModalCategoria(false)
+                    setFormCategoria({ nome: '', descricao: '' })
+                    setCategoriaEditando(null)
+                  }}
+                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded-xl transition-all font-medium shadow-lg shadow-blue-500/20"
+                >
+                  {categoriaEditando ? 'Salvar Alterações' : 'Criar Categoria'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   )
 }

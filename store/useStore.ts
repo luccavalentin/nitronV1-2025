@@ -119,6 +119,14 @@ export interface Transacao {
   data: Date
   projetoId?: string
   clienteId?: string
+  periodicidade?: 'unica' | 'mensal' | 'bimestral' | 'trimestral' | 'semestral' | 'anual' | 'parcelada'
+  quantidadeParcelas?: number
+  dataInicio?: Date
+  status?: 'pendente' | 'recebido' | 'pago' | 'cancelado'
+  parcelaAtual?: number
+  transacaoPaiId?: string // ID da transação original que gerou as parcelas
+  parcelaAtual?: number
+  transacaoPaiId?: string // ID da transação original que gerou as parcelas
 }
 
 export interface Lancamento {
@@ -270,6 +278,31 @@ export interface Configuracoes {
   pomodoroPausaLongaApos: number // número de pomodoros antes da pausa longa
 }
 
+export interface CategoriaFinanceira {
+  id: string
+  nome: string
+  descricao?: string
+  dataCriacao: Date
+}
+
+export interface Acordo {
+  id: string
+  descricao: string
+  credor: string
+  valorOriginal: number
+  valorAcordado: number
+  valorParcela: number
+  quantidadeParcelas: number
+  parcelaAtual: number
+  dataInicio: Date
+  dataVencimento: Date
+  status: 'ativo' | 'quitado' | 'cancelado' | 'atrasado'
+  renegociado: boolean
+  observacoes?: string
+  dataCriacao: Date
+  dataAtualizacao: Date
+}
+
 interface Store {
   // Data
   clientes: Cliente[]
@@ -288,12 +321,14 @@ interface Store {
   materias: Materia[]
   aulas: Aula[]
   configuracoes: Configuracoes
+  categoriasFinanceiras: CategoriaFinanceira[]
+  acordos: Acordo[]
   
   // Actions
   setClientes: (clientes: Cliente[]) => void
-  addCliente: (cliente: Cliente) => void
-  updateCliente: (id: string, cliente: Partial<Cliente>) => void
-  deleteCliente: (id: string) => void
+  addCliente: (cliente: Cliente) => Promise<void>
+  updateCliente: (id: string, cliente: Partial<Cliente>) => Promise<void>
+  deleteCliente: (id: string) => Promise<void>
   
   setProjetos: (projetos: Projeto[]) => void
   addProjeto: (projeto: Projeto) => void
@@ -301,9 +336,9 @@ interface Store {
   deleteProjeto: (id: string) => void
   
   setTarefas: (tarefas: Tarefa[]) => void
-  addTarefa: (tarefa: Tarefa) => void
-  updateTarefa: (id: string, tarefa: Partial<Tarefa>) => void
-  deleteTarefa: (id: string) => void
+  addTarefa: (tarefa: Tarefa) => Promise<void>
+  updateTarefa: (id: string, tarefa: Partial<Tarefa>) => Promise<void>
+  deleteTarefa: (id: string) => Promise<void>
   
   setVersoes: (versoes: Versao[]) => void
   addVersao: (versao: Versao) => void
@@ -311,9 +346,12 @@ interface Store {
   deleteVersao: (id: string) => void
   
   setTransacoes: (transacoes: Transacao[]) => void
-  addTransacao: (transacao: Transacao) => void
-  updateTransacao: (id: string, transacao: Partial<Transacao>) => void
-  deleteTransacao: (id: string) => void
+  addTransacao: (transacao: Transacao) => Promise<void>
+  updateTransacao: (id: string, transacao: Partial<Transacao>) => Promise<void>
+  deleteTransacao: (id: string) => Promise<void>
+  
+  // Carregar dados do Supabase
+  loadDataFromSupabase: () => Promise<void>
   
   setLancamentos: (lancamentos: Lancamento[]) => void
   addLancamento: (lancamento: Lancamento) => void
@@ -364,6 +402,18 @@ interface Store {
   updateConfiguracoes: (configuracoes: Partial<Configuracoes>) => void
   loadConfiguracoes: () => void
   saveConfiguracoes: () => void
+  
+  // Categorias Financeiras
+  setCategoriasFinanceiras: (categorias: CategoriaFinanceira[]) => void
+  addCategoriaFinanceira: (categoria: CategoriaFinanceira) => void
+  updateCategoriaFinanceira: (id: string, categoria: Partial<CategoriaFinanceira>) => void
+  deleteCategoriaFinanceira: (id: string) => void
+  
+  // Acordos
+  setAcordos: (acordos: Acordo[]) => void
+  addAcordo: (acordo: Acordo) => void
+  updateAcordo: (id: string, acordo: Partial<Acordo>) => void
+  deleteAcordo: (id: string) => void
   
   // Initialize mock data
   initializeMockData: () => void
@@ -601,7 +651,9 @@ export const useStore = create<Store>()(
   temasEstudo: [],
   materias: [],
   aulas: [],
-  configuracoes: {
+      categoriasFinanceiras: [],
+      acordos: [],
+      configuracoes: {
     nome: 'Usuário',
     email: 'usuario@exemplo.com',
     telefone: '',
@@ -636,12 +688,64 @@ export const useStore = create<Store>()(
 
   // Clientes
   setClientes: (clientes) => set({ clientes }),
-  addCliente: (cliente) => set((state) => ({ clientes: [...state.clientes, cliente] })),
-  updateCliente: (id, cliente) =>
+  addCliente: async (cliente) => {
+    // Tentar salvar no Supabase primeiro
+    try {
+      const { clientesService } = await import('@/lib/services/supabase')
+      const { isSupabaseConfigured } = await import('@/lib/supabase')
+      
+      if (isSupabaseConfigured()) {
+        const clienteSalvo = await clientesService.createCliente(cliente)
+        set((state) => ({ clientes: [...state.clientes, clienteSalvo] }))
+        return
+      }
+    } catch (error) {
+      console.error('Erro ao salvar cliente no Supabase, usando localStorage:', error)
+    }
+    
+    // Fallback para localStorage
+    set((state) => ({ clientes: [...state.clientes, cliente] }))
+  },
+  updateCliente: async (id, cliente) => {
+    // Tentar atualizar no Supabase primeiro
+    try {
+      const { clientesService } = await import('@/lib/services/supabase')
+      const { isSupabaseConfigured } = await import('@/lib/supabase')
+      
+      if (isSupabaseConfigured()) {
+        const clienteAtualizado = await clientesService.updateCliente(id, cliente)
+        set((state) => ({
+          clientes: state.clientes.map((c) => (c.id === id ? clienteAtualizado : c)),
+        }))
+        return
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar cliente no Supabase, usando localStorage:', error)
+    }
+    
+    // Fallback para localStorage
     set((state) => ({
       clientes: state.clientes.map((c) => (c.id === id ? { ...c, ...cliente } : c)),
-    })),
-  deleteCliente: (id) => set((state) => ({ clientes: state.clientes.filter((c) => c.id !== id) })),
+    }))
+  },
+  deleteCliente: async (id) => {
+    // Tentar deletar no Supabase primeiro
+    try {
+      const { clientesService } = await import('@/lib/services/supabase')
+      const { isSupabaseConfigured } = await import('@/lib/supabase')
+      
+      if (isSupabaseConfigured()) {
+        await clientesService.deleteCliente(id)
+        set((state) => ({ clientes: state.clientes.filter((c) => c.id !== id) }))
+        return
+      }
+    } catch (error) {
+      console.error('Erro ao deletar cliente no Supabase, usando localStorage:', error)
+    }
+    
+    // Fallback para localStorage
+    set((state) => ({ clientes: state.clientes.filter((c) => c.id !== id) }))
+  },
 
   // Projetos
   setProjetos: (projetos) => set({ projetos }),
@@ -654,12 +758,64 @@ export const useStore = create<Store>()(
 
   // Tarefas
   setTarefas: (tarefas) => set({ tarefas }),
-  addTarefa: (tarefa) => set((state) => ({ tarefas: [...state.tarefas, tarefa] })),
-  updateTarefa: (id, tarefa) =>
+  addTarefa: async (tarefa) => {
+    // Tentar salvar no Supabase primeiro
+    try {
+      const { tarefasService } = await import('@/lib/services/supabase')
+      const { isSupabaseConfigured } = await import('@/lib/supabase')
+      
+      if (isSupabaseConfigured()) {
+        const tarefaSalva = await tarefasService.createTarefa(tarefa)
+        set((state) => ({ tarefas: [...state.tarefas, tarefaSalva] }))
+        return
+      }
+    } catch (error) {
+      console.error('Erro ao salvar tarefa no Supabase, usando localStorage:', error)
+    }
+    
+    // Fallback para localStorage
+    set((state) => ({ tarefas: [...state.tarefas, tarefa] }))
+  },
+  updateTarefa: async (id, tarefa) => {
+    // Tentar atualizar no Supabase primeiro
+    try {
+      const { tarefasService } = await import('@/lib/services/supabase')
+      const { isSupabaseConfigured } = await import('@/lib/supabase')
+      
+      if (isSupabaseConfigured()) {
+        const tarefaAtualizada = await tarefasService.updateTarefa(id, tarefa)
+        set((state) => ({
+          tarefas: state.tarefas.map((t) => (t.id === id ? tarefaAtualizada : t)),
+        }))
+        return
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar tarefa no Supabase, usando localStorage:', error)
+    }
+    
+    // Fallback para localStorage
     set((state) => ({
       tarefas: state.tarefas.map((t) => (t.id === id ? { ...t, ...tarefa } : t)),
-    })),
-  deleteTarefa: (id) => set((state) => ({ tarefas: state.tarefas.filter((t) => t.id !== id) })),
+    }))
+  },
+  deleteTarefa: async (id) => {
+    // Tentar deletar no Supabase primeiro
+    try {
+      const { tarefasService } = await import('@/lib/services/supabase')
+      const { isSupabaseConfigured } = await import('@/lib/supabase')
+      
+      if (isSupabaseConfigured()) {
+        await tarefasService.deleteTarefa(id)
+        set((state) => ({ tarefas: state.tarefas.filter((t) => t.id !== id) }))
+        return
+      }
+    } catch (error) {
+      console.error('Erro ao deletar tarefa no Supabase, usando localStorage:', error)
+    }
+    
+    // Fallback para localStorage
+    set((state) => ({ tarefas: state.tarefas.filter((t) => t.id !== id) }))
+  },
 
   // Versões
   setVersoes: (versoes) => set({ versoes }),
@@ -672,12 +828,64 @@ export const useStore = create<Store>()(
 
   // Transações
   setTransacoes: (transacoes) => set({ transacoes }),
-  addTransacao: (transacao) => set((state) => ({ transacoes: [...state.transacoes, transacao] })),
-  updateTransacao: (id, transacao) =>
+  addTransacao: async (transacao) => {
+    // Tentar salvar no Supabase primeiro
+    try {
+      const { transacoesService } = await import('@/lib/services/supabase')
+      const { isSupabaseConfigured } = await import('@/lib/supabase')
+      
+      if (isSupabaseConfigured()) {
+        const transacaoSalva = await transacoesService.createTransacao(transacao)
+        set((state) => ({ transacoes: [...state.transacoes, transacaoSalva] }))
+        return
+      }
+    } catch (error) {
+      console.error('Erro ao salvar transação no Supabase, usando localStorage:', error)
+    }
+    
+    // Fallback para localStorage
+    set((state) => ({ transacoes: [...state.transacoes, transacao] }))
+  },
+  updateTransacao: async (id, transacao) => {
+    // Tentar atualizar no Supabase primeiro
+    try {
+      const { transacoesService } = await import('@/lib/services/supabase')
+      const { isSupabaseConfigured } = await import('@/lib/supabase')
+      
+      if (isSupabaseConfigured()) {
+        const transacaoAtualizada = await transacoesService.updateTransacao(id, transacao)
+        set((state) => ({
+          transacoes: state.transacoes.map((t) => (t.id === id ? transacaoAtualizada : t)),
+        }))
+        return
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar transação no Supabase, usando localStorage:', error)
+    }
+    
+    // Fallback para localStorage
     set((state) => ({
       transacoes: state.transacoes.map((t) => (t.id === id ? { ...t, ...transacao } : t)),
-    })),
-  deleteTransacao: (id) => set((state) => ({ transacoes: state.transacoes.filter((t) => t.id !== id) })),
+    }))
+  },
+  deleteTransacao: async (id) => {
+    // Tentar deletar no Supabase primeiro
+    try {
+      const { transacoesService } = await import('@/lib/services/supabase')
+      const { isSupabaseConfigured } = await import('@/lib/supabase')
+      
+      if (isSupabaseConfigured()) {
+        await transacoesService.deleteTransacao(id)
+        set((state) => ({ transacoes: state.transacoes.filter((t) => t.id !== id) }))
+        return
+      }
+    } catch (error) {
+      console.error('Erro ao deletar transação no Supabase, usando localStorage:', error)
+    }
+    
+    // Fallback para localStorage
+    set((state) => ({ transacoes: state.transacoes.filter((t) => t.id !== id) }))
+  },
 
   // Lançamentos
   setLancamentos: (lancamentos) => set({ lancamentos }),
@@ -784,6 +992,38 @@ export const useStore = create<Store>()(
     }
   },
 
+  // Categorias Financeiras
+  setCategoriasFinanceiras: (categorias) => {
+    set({ categoriasFinanceiras: categorias })
+  },
+  addCategoriaFinanceira: (categoria) => {
+    set((state) => ({ 
+      categoriasFinanceiras: [...(state.categoriasFinanceiras || []), categoria] 
+    }))
+  },
+  updateCategoriaFinanceira: (id, categoria) => {
+    set((state) => ({
+      categoriasFinanceiras: (state.categoriasFinanceiras || []).map((c) =>
+        c.id === id ? { ...c, ...categoria } : c
+      ),
+    }))
+  },
+  deleteCategoriaFinanceira: (id) => {
+    set((state) => ({
+      categoriasFinanceiras: (state.categoriasFinanceiras || []).filter((c) => c.id !== id),
+    }))
+  },
+
+  // Acordos
+  setAcordos: (acordos) => set({ acordos }),
+  addAcordo: (acordo) => set((state) => ({ acordos: [...(state.acordos || []), acordo] })),
+  updateAcordo: (id, acordo) => set((state) => ({
+    acordos: (state.acordos || []).map((a) => (a.id === id ? { ...a, ...acordo, dataAtualizacao: new Date() } : a)),
+  })),
+  deleteAcordo: (id) => set((state) => ({
+    acordos: (state.acordos || []).filter((a) => a.id !== id),
+  })),
+
   // Initialize mock data - Limpo para começar do zero
   initializeMockData: () => {
     // Dados limpos - sistema começa vazio
@@ -793,6 +1033,8 @@ export const useStore = create<Store>()(
       tarefas: [],
       versoes: [],
       transacoes: [],
+      categoriasFinanceiras: [],
+      acordos: [],
       lancamentos: [],
       orcamentos: [],
       ideias: [],
@@ -800,6 +1042,39 @@ export const useStore = create<Store>()(
       materias: [],
       aulas: [],
     })
+  },
+
+  // Carregar dados do Supabase
+  loadDataFromSupabase: async () => {
+    try {
+      const { clientesService, projetosService, transacoesService, tarefasService } = await import('@/lib/services/supabase')
+      const { isSupabaseConfigured } = await import('@/lib/supabase')
+      
+      if (!isSupabaseConfigured()) {
+        console.warn('Supabase não configurado, dados não serão carregados do banco')
+        return
+      }
+
+      // Carregar todos os dados em paralelo
+      const [clientes, projetos, transacoes, tarefas] = await Promise.all([
+        clientesService.getClientes().catch(() => []),
+        projetosService.getProjetos().catch(() => []),
+        transacoesService.getTransacoes().catch(() => []),
+        tarefasService.getTarefas().catch(() => []),
+      ])
+
+      // Atualizar o store com os dados do Supabase
+      set({
+        clientes,
+        projetos,
+        transacoes,
+        tarefas,
+      })
+
+      console.log('✅ Dados carregados do Supabase com sucesso!')
+    } catch (error) {
+      console.error('❌ Erro ao carregar dados do Supabase:', error)
+    }
   },
 }),
     {

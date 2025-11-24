@@ -72,19 +72,19 @@ export default function DashboardPage() {
 
   return (
     <Layout>
-      <div className="space-y-8 animate-fade-in pb-8">
+      <div className="space-y-4 sm:space-y-6 md:space-y-8 animate-fade-in pb-8">
         {/* Header Principal */}
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-blue-100 to-cyan-100 bg-clip-text text-transparent">
+        <div className="text-center space-y-1 sm:space-y-2">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-white via-blue-100 to-cyan-100 bg-clip-text text-transparent">
             Dashboard Executivo
           </h1>
-          <p className="text-slate-400 text-lg">Visão consolidada do seu negócio</p>
+          <p className="text-slate-400 text-sm sm:text-base md:text-lg">Visão consolidada do seu negócio</p>
         </div>
 
         {/* Cards de Métricas Principais - Design Moderno */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 md:gap-6 max-w-7xl mx-auto">
           {/* Receita Total */}
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50 shadow-xl hover:shadow-2xl hover:border-blue-500/30 transition-all duration-300 group">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 border border-slate-700/50 shadow-xl hover:shadow-2xl hover:border-blue-500/30 transition-all duration-300 group">
             <div className="flex items-start justify-between mb-4">
               <div className="p-3 bg-green-500/10 rounded-xl border border-green-500/20 group-hover:bg-green-500/20 transition-colors">
                 <DollarSign className="text-green-400" size={24} />
@@ -102,15 +102,15 @@ export default function DashboardPage() {
               </button>
             </div>
             <div className="space-y-1">
-              <div className="text-slate-400 text-sm font-medium">Receita Total</div>
-              <div className="text-3xl font-bold text-white">
+              <div className="text-slate-400 text-xs sm:text-sm font-medium">Receita Total</div>
+              <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">
                 {valoresVisiveis ? formatCurrency(receitaTotal) : '••••••'}
               </div>
               {crescimentoReceita !== null && (
-                <div className="flex items-center gap-2 text-sm">
-                  <TrendingUp className="text-green-400" size={16} />
+                <div className="flex items-center gap-2 text-xs sm:text-sm">
+                  <TrendingUp className="text-green-400" size={14} />
                   <span className="text-green-400 font-medium">+{crescimentoReceita.toFixed(1)}%</span>
-                  <span className="text-slate-500">vs mês anterior</span>
+                  <span className="text-slate-500 hidden sm:inline">vs mês anterior</span>
                 </div>
               )}
             </div>
@@ -119,20 +119,20 @@ export default function DashboardPage() {
           {/* Projetos Ativos */}
           <button
             onClick={() => setModalAberto('projetos-ativos')}
-            className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50 shadow-xl hover:shadow-2xl hover:border-blue-500/30 transition-all duration-300 group text-left"
+            className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 border border-slate-700/50 shadow-xl hover:shadow-2xl hover:border-blue-500/30 transition-all duration-300 group text-left"
           >
-            <div className="flex items-start justify-between mb-4">
-              <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20 group-hover:bg-blue-500/20 transition-colors">
-                <Activity className="text-blue-400" size={24} />
+            <div className="flex items-start justify-between mb-3 sm:mb-4">
+              <div className="p-2 sm:p-3 bg-blue-500/10 rounded-lg sm:rounded-xl border border-blue-500/20 group-hover:bg-blue-500/20 transition-colors">
+                <Activity className="text-blue-400" size={20} />
               </div>
-              <ArrowUpRight className="text-slate-500 group-hover:text-blue-400 transition-colors" size={20} />
+              <ArrowUpRight className="text-slate-500 group-hover:text-blue-400 transition-colors" size={18} />
             </div>
             <div className="space-y-1">
-              <div className="text-slate-400 text-sm font-medium">Projetos Ativos</div>
-              <div className="text-3xl font-bold text-white">
+              <div className="text-slate-400 text-xs sm:text-sm font-medium">Projetos Ativos</div>
+              <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">
                 {projetosAtivos}
               </div>
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2 text-xs sm:text-sm">
                 <span className="text-slate-500">de {projetos.length} projetos</span>
               </div>
             </div>
@@ -141,22 +141,22 @@ export default function DashboardPage() {
           {/* Tarefas */}
           <button
             onClick={() => setModalAberto('tarefas-ativas')}
-            className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50 shadow-xl hover:shadow-2xl hover:border-purple-500/30 transition-all duration-300 group text-left"
+            className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 border border-slate-700/50 shadow-xl hover:shadow-2xl hover:border-purple-500/30 transition-all duration-300 group text-left"
           >
-            <div className="flex items-start justify-between mb-4">
-              <div className="p-3 bg-purple-500/10 rounded-xl border border-purple-500/20 group-hover:bg-purple-500/20 transition-colors">
-                <ClipboardList className="text-purple-400" size={24} />
+            <div className="flex items-start justify-between mb-3 sm:mb-4">
+              <div className="p-2 sm:p-3 bg-purple-500/10 rounded-lg sm:rounded-xl border border-purple-500/20 group-hover:bg-purple-500/20 transition-colors">
+                <ClipboardList className="text-purple-400" size={20} />
               </div>
-              <ArrowUpRight className="text-slate-500 group-hover:text-purple-400 transition-colors" size={20} />
+              <ArrowUpRight className="text-slate-500 group-hover:text-purple-400 transition-colors" size={18} />
             </div>
             <div className="space-y-1">
-              <div className="text-slate-400 text-sm font-medium">Tarefas Pendentes</div>
-              <div className="text-3xl font-bold text-white">
+              <div className="text-slate-400 text-xs sm:text-sm font-medium">Tarefas Pendentes</div>
+              <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">
                 {tarefasAtivas}
               </div>
               {tarefasAtrasadas > 0 && (
-                <div className="flex items-center gap-2 text-sm">
-                  <AlertCircle className="text-red-400" size={14} />
+                <div className="flex items-center gap-2 text-xs sm:text-sm">
+                  <AlertCircle className="text-red-400" size={12} />
                   <span className="text-red-400 font-medium">{tarefasAtrasadas} atrasadas</span>
                 </div>
               )}
@@ -166,11 +166,11 @@ export default function DashboardPage() {
           {/* Clientes */}
           <button
             onClick={() => setModalAberto('clientes')}
-            className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50 shadow-xl hover:shadow-2xl hover:border-cyan-500/30 transition-all duration-300 group text-left"
+            className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 border border-slate-700/50 shadow-xl hover:shadow-2xl hover:border-cyan-500/30 transition-all duration-300 group text-left"
           >
-            <div className="flex items-start justify-between mb-4">
-              <div className="p-3 bg-cyan-500/10 rounded-xl border border-cyan-500/20 group-hover:bg-cyan-500/20 transition-colors">
-                <Users className="text-cyan-400" size={24} />
+            <div className="flex items-start justify-between mb-3 sm:mb-4">
+              <div className="p-2 sm:p-3 bg-cyan-500/10 rounded-lg sm:rounded-xl border border-cyan-500/20 group-hover:bg-cyan-500/20 transition-colors">
+                <Users className="text-cyan-400" size={20} />
               </div>
               <ArrowUpRight className="text-slate-500 group-hover:text-cyan-400 transition-colors" size={20} />
             </div>

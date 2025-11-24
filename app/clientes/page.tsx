@@ -91,11 +91,6 @@ export default function ClientesPage() {
   }
 
   const handleSalvar = () => {
-    if (!formData.nome || !formData.email) {
-      alert('Por favor, preencha pelo menos o nome e o email')
-      return
-    }
-
     if (modoCriacao) {
       const novoCliente: Cliente = {
         id: `cliente-${Date.now()}`,
@@ -125,82 +120,82 @@ export default function ClientesPage() {
 
   return (
     <Layout>
-      <div className="space-y-8 animate-fade-in pb-8">
+      <div className="space-y-4 sm:space-y-6 md:space-y-8 animate-fade-in pb-8">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-blue-100 to-cyan-100 bg-clip-text text-transparent">
+        <div className="text-center space-y-1 sm:space-y-2">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-white via-blue-100 to-cyan-100 bg-clip-text text-transparent">
             Gestão de Clientes
           </h1>
-          <p className="text-slate-400 text-lg">Gerencie e acompanhe todos os seus clientes</p>
+          <p className="text-slate-400 text-sm sm:text-base md:text-lg">Gerencie e acompanhe todos os seus clientes</p>
         </div>
 
         {/* Estatísticas Rápidas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-7xl mx-auto">
-          <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-5 border border-slate-700/50 shadow-xl">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 max-w-7xl mx-auto">
+          <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 border border-slate-700/50 shadow-xl">
             <div className="flex items-center justify-between mb-3">
               <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
                 <Users className="text-blue-400" size={20} />
               </div>
             </div>
-            <div className="text-2xl font-bold text-white mb-1">{clientes.length}</div>
-            <div className="text-slate-400 text-sm">Total de Clientes</div>
+            <div className="text-xl sm:text-2xl font-bold text-white mb-1">{clientes.length}</div>
+            <div className="text-slate-400 text-xs sm:text-sm">Total de Clientes</div>
           </div>
 
-          <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-5 border border-green-500/30 shadow-xl">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 bg-green-500/10 rounded-lg border border-green-500/20">
-                <CheckCircle2 className="text-green-400" size={20} />
+          <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 border border-green-500/30 shadow-xl">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="p-1.5 sm:p-2 bg-green-500/10 rounded-lg border border-green-500/20">
+                <CheckCircle2 className="text-green-400" size={16} />
               </div>
             </div>
-            <div className="text-2xl font-bold text-green-400 mb-1">{clientesAtivos}</div>
-            <div className="text-slate-400 text-sm">Clientes Ativos</div>
+            <div className="text-xl sm:text-2xl font-bold text-green-400 mb-1">{clientesAtivos}</div>
+            <div className="text-slate-400 text-xs sm:text-sm">Clientes Ativos</div>
           </div>
 
-          <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-5 border border-yellow-500/30 shadow-xl">
+          <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 border border-yellow-500/30 shadow-xl">
             <div className="flex items-center justify-between mb-3">
               <div className="p-2 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
                 <Clock className="text-yellow-400" size={20} />
               </div>
             </div>
-            <div className="text-2xl font-bold text-yellow-400 mb-1">{clientesProspectos}</div>
-            <div className="text-slate-400 text-sm">Prospectos</div>
+            <div className="text-xl sm:text-2xl font-bold text-yellow-400 mb-1">{clientesProspectos}</div>
+            <div className="text-slate-400 text-xs sm:text-sm">Prospectos</div>
           </div>
 
-          <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-5 border border-red-500/30 shadow-xl">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 bg-red-500/10 rounded-lg border border-red-500/20">
-                <XCircle className="text-red-400" size={20} />
+          <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 border border-red-500/30 shadow-xl">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="p-1.5 sm:p-2 bg-red-500/10 rounded-lg border border-red-500/20">
+                <XCircle className="text-red-400" size={16} />
               </div>
             </div>
-            <div className="text-2xl font-bold text-red-400 mb-1">{clientesInativos}</div>
-            <div className="text-slate-400 text-sm">Inativos</div>
+            <div className="text-xl sm:text-2xl font-bold text-red-400 mb-1">{clientesInativos}</div>
+            <div className="text-slate-400 text-xs sm:text-sm">Inativos</div>
           </div>
         </div>
 
         {/* Barra de Ações e Filtros */}
         <div className="max-w-7xl mx-auto">
-          <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 shadow-xl">
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 border border-slate-700/50 shadow-xl">
+            <div className="flex flex-col md:flex-row gap-3 sm:gap-4 items-stretch md:items-center justify-between">
               <div className="flex-1 w-full md:w-auto">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
                   <input
                     type="text"
                     placeholder="Buscar por nome, email, empresa ou telefone..."
                     value={busca}
                     onChange={(e) => setBusca(e.target.value)}
-                    className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl pl-10 pr-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+                    className="w-full bg-slate-700/50 border border-slate-600/50 rounded-lg sm:rounded-xl pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 text-sm sm:text-base text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
                   />
                 </div>
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                 <div className="flex items-center gap-2">
-                  <Filter className="text-slate-400" size={18} />
+                  <Filter className="text-slate-400 hidden sm:block" size={18} />
                   <select
                     value={filtroStatus}
                     onChange={(e) => setFiltroStatus(e.target.value)}
-                    className="bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+                    className="flex-1 sm:flex-none bg-slate-700/50 border border-slate-600/50 rounded-lg sm:rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
                   >
                     <option value="todos">Todos os Status</option>
                     <option value="ativo">Ativos</option>
@@ -211,18 +206,19 @@ export default function ClientesPage() {
                 
                 <Link
                   href="/crm"
-                  className="flex items-center gap-2 px-4 py-3 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/50 text-cyan-400 rounded-xl transition-all font-medium"
+                  className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/50 text-cyan-400 rounded-lg sm:rounded-xl transition-all font-medium text-sm sm:text-base"
                 >
-                  <ExternalLink size={18} />
-                  CRM
+                  <ExternalLink size={16} />
+                  <span className="hidden sm:inline">CRM</span>
                 </Link>
                 
                 <button 
                   onClick={handleNovoCliente}
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded-xl transition-all font-medium shadow-lg shadow-blue-500/20"
+                  className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded-lg sm:rounded-xl transition-all font-medium shadow-lg shadow-blue-500/20 text-sm sm:text-base"
                 >
-                  <Plus size={20} />
-                  Novo Cliente
+                  <Plus size={18} />
+                  <span className="hidden sm:inline">Novo Cliente</span>
+                  <span className="sm:hidden">Novo</span>
                 </button>
               </div>
             </div>
@@ -260,11 +256,11 @@ export default function ClientesPage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 max-w-7xl mx-auto">
             {clientesFiltrados.map((cliente) => (
               <div
                 key={cliente.id}
-                className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 hover:border-blue-500/50 shadow-xl hover:shadow-2xl transition-all duration-300 group"
+                className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 border border-slate-700/50 hover:border-blue-500/50 shadow-xl hover:shadow-2xl transition-all duration-300 group"
               >
                 {/* Header do Card */}
                 <div className="flex items-start justify-between mb-5">
@@ -364,9 +360,10 @@ export default function ClientesPage() {
               <input
                 type="text"
                 value={formData.nome || ''}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+                onChange={(e) => setFormData({ ...formData, nome: e.target.value.toUpperCase() })}
+                className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all uppercase"
                 placeholder="Nome completo"
+                style={{ textTransform: 'uppercase' }}
               />
             </div>
 
@@ -412,9 +409,10 @@ export default function ClientesPage() {
               <input
                 type="text"
                 value={formData.empresa || ''}
-                onChange={(e) => setFormData({ ...formData, empresa: e.target.value })}
-                className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+                onChange={(e) => setFormData({ ...formData, empresa: e.target.value.toUpperCase() })}
+                className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all uppercase"
                 placeholder="Nome da empresa"
+                style={{ textTransform: 'uppercase' }}
               />
             </div>
 

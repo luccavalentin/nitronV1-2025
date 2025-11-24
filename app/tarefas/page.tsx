@@ -149,54 +149,54 @@ export default function TarefasPage() {
 
   return (
     <Layout>
-      <div className="space-y-8 animate-fade-in pb-8">
+      <div className="space-y-4 sm:space-y-6 md:space-y-8 animate-fade-in pb-8">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-purple-100 to-pink-100 bg-clip-text text-transparent">
+        <div className="text-center space-y-1 sm:space-y-2">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-white via-purple-100 to-pink-100 bg-clip-text text-transparent">
             Gestão de Tarefas
           </h1>
-          <p className="text-slate-400 text-lg">Organize e acompanhe todas as suas tarefas</p>
+          <p className="text-slate-400 text-sm sm:text-base md:text-lg">Organize e acompanhe todas as suas tarefas</p>
         </div>
 
         {/* Estatísticas Rápidas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-7xl mx-auto">
-          <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-5 border border-slate-700/50 shadow-xl">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 bg-purple-500/10 rounded-lg border border-purple-500/20">
-                <ClipboardList className="text-purple-400" size={20} />
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 max-w-7xl mx-auto">
+          <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 border border-slate-700/50 shadow-xl">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="p-1.5 sm:p-2 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                <ClipboardList className="text-purple-400" size={16} />
               </div>
             </div>
-            <div className="text-2xl font-bold text-white mb-1">{tarefas.length}</div>
-            <div className="text-slate-400 text-sm">Total de Tarefas</div>
+            <div className="text-xl sm:text-2xl font-bold text-white mb-1">{tarefas.length}</div>
+            <div className="text-slate-400 text-xs sm:text-sm">Total de Tarefas</div>
           </div>
 
-          <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-5 border border-green-500/30 shadow-xl">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 bg-green-500/10 rounded-lg border border-green-500/20">
-                <CheckCircle2 className="text-green-400" size={20} />
+          <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 border border-green-500/30 shadow-xl">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="p-1.5 sm:p-2 bg-green-500/10 rounded-lg border border-green-500/20">
+                <CheckCircle2 className="text-green-400" size={16} />
               </div>
             </div>
-            <div className="text-2xl font-bold text-green-400 mb-1">{tarefasConcluidas}</div>
-            <div className="text-slate-400 text-sm">Concluídas</div>
+            <div className="text-xl sm:text-2xl font-bold text-green-400 mb-1">{tarefasConcluidas}</div>
+            <div className="text-slate-400 text-xs sm:text-sm">Concluídas</div>
           </div>
 
-          <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-5 border border-blue-500/30 shadow-xl">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                <Clock className="text-blue-400" size={20} />
+          <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 border border-blue-500/30 shadow-xl">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="p-1.5 sm:p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                <Clock className="text-blue-400" size={16} />
               </div>
             </div>
-            <div className="text-2xl font-bold text-blue-400 mb-1">{tarefasEmProgresso}</div>
-            <div className="text-slate-400 text-sm">Em Progresso</div>
+            <div className="text-xl sm:text-2xl font-bold text-blue-400 mb-1">{tarefasEmProgresso}</div>
+            <div className="text-slate-400 text-xs sm:text-sm">Em Progresso</div>
           </div>
 
-          <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-5 border border-red-500/30 shadow-xl">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 bg-red-500/10 rounded-lg border border-red-500/20">
-                <AlertCircle className="text-red-400" size={20} />
+          <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 border border-red-500/30 shadow-xl">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="p-1.5 sm:p-2 bg-red-500/10 rounded-lg border border-red-500/20">
+                <AlertCircle className="text-red-400" size={16} />
               </div>
             </div>
-            <div className="text-2xl font-bold text-red-400 mb-1">{tarefasAtrasadas}</div>
+            <div className="text-xl sm:text-2xl font-bold text-red-400 mb-1">{tarefasAtrasadas}</div>
             <div className="text-slate-400 text-sm">Atrasadas</div>
           </div>
         </div>
@@ -391,8 +391,9 @@ export default function TarefasPage() {
                     <input
                       type="text"
                       value={formData.titulo || ''}
-                      onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
-                      className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
+                      onChange={(e) => setFormData({ ...formData, titulo: e.target.value.toUpperCase() })}
+                      className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all uppercase"
+                      style={{ textTransform: 'uppercase' }}
                     />
                   </div>
 
@@ -400,9 +401,10 @@ export default function TarefasPage() {
                     <label className="block text-slate-400 text-sm mb-2 font-medium">Descrição</label>
                     <textarea
                       value={formData.descricao || ''}
-                      onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, descricao: e.target.value.toUpperCase() })}
                       rows={4}
-                      className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 resize-none transition-all"
+                      className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 resize-none transition-all uppercase"
+                      style={{ textTransform: 'uppercase' }}
                     />
                   </div>
 

@@ -105,8 +105,6 @@ export default function VersoesPage() {
 
   const handleSalvar = () => {
     if (!formData.numero || !formData.projetoId) {
-      alert('Por favor, preencha o número da versão e selecione um projeto')
-      return
     }
 
     if (modoCriacao) {

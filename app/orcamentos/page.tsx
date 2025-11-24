@@ -179,8 +179,6 @@ export default function OrcamentosPage() {
 
   const handleSalvar = () => {
     if (!formData.titulo) {
-      alert('Por favor, preencha o título do orçamento')
-      return
     }
 
     if (modoCriacao) {
@@ -1129,9 +1127,10 @@ export default function OrcamentosPage() {
               <input
                 type="text"
                 value={formData.titulo || ''}
-                onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
-                className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+                onChange={(e) => setFormData({ ...formData, titulo: e.target.value.toUpperCase() })}
+                className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all uppercase"
                 placeholder="Título do orçamento"
+                style={{ textTransform: 'uppercase' }}
               />
             </div>
 
@@ -1139,10 +1138,11 @@ export default function OrcamentosPage() {
               <label className="block text-slate-400 text-sm mb-2 font-medium">Descrição</label>
               <textarea
                 value={formData.descricao || ''}
-                onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, descricao: e.target.value.toUpperCase() })}
                 rows={3}
-                className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 resize-none transition-all"
+                className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 resize-none transition-all uppercase"
                 placeholder="Descrição do orçamento..."
+                style={{ textTransform: 'uppercase' }}
               />
             </div>
 

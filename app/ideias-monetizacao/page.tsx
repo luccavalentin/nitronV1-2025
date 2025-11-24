@@ -105,7 +105,13 @@ export default function IdeiasMonetizacaoPage() {
             <h1 className="text-3xl font-bold text-white mb-2">Ideias de Monetização</h1>
             <p className="text-slate-400">Gerencie suas ideias de negócio</p>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+          <button
+            onClick={() => {
+              // TODO: Implementar modal de nova ideia
+              alert('Funcionalidade de nova ideia será implementada em breve')
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+          >
             <Plus size={20} />
             Nova Ideia
           </button>

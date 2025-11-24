@@ -80,10 +80,6 @@ export default function MateriasPage() {
   }
 
   const handleSalvar = () => {
-    if (!formData.nome || !formData.temaId) {
-      alert('Por favor, preencha o nome e selecione um tema')
-      return
-    }
 
     if (modoCriacao) {
       const novaMateria: Materia = {
@@ -138,11 +134,6 @@ export default function MateriasPage() {
   }
 
   const handleSalvarAula = () => {
-    if (!formDataAula.titulo || !formDataAula.materiaId) {
-      alert('Por favor, preencha o título da aula')
-      return
-    }
-
     if (modoEdicaoAula && aulaSelecionada) {
       const updatedData = {
         ...formDataAula,

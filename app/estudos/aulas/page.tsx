@@ -64,11 +64,6 @@ export default function AulasPage() {
   }
 
   const handleSalvar = () => {
-    if (!formData.titulo || !formData.materiaId) {
-      alert('Por favor, preencha o título e selecione uma matéria')
-      return
-    }
-
     if (modoCriacao) {
       const novaAula: Aula = {
         id: `aula-${Date.now()}`,

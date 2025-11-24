@@ -53,10 +53,6 @@ export default function TemasPage() {
   }
 
   const handleSalvar = () => {
-    if (!formData.nome) {
-      alert('Por favor, preencha o nome do tema')
-      return
-    }
 
     if (modoCriacao) {
       const novoTema: TemaEstudo = {

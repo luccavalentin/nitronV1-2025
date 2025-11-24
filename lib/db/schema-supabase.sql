@@ -77,6 +77,12 @@ CREATE TABLE IF NOT EXISTS transacoes (
     projeto_id UUID REFERENCES projetos(id) ON DELETE SET NULL,
     cliente_id UUID REFERENCES clientes(id) ON DELETE SET NULL,
     data DATE NOT NULL,
+    periodicidade VARCHAR(50) CHECK (periodicidade IN ('unica', 'mensal', 'bimestral', 'trimestral', 'semestral', 'anual', 'parcelada')),
+    quantidade_parcelas INTEGER,
+    data_inicio DATE,
+    status VARCHAR(50) CHECK (status IN ('pendente', 'recebido', 'pago', 'cancelado')) DEFAULT 'pendente',
+    parcela_atual INTEGER,
+    transacao_pai_id UUID,
     notas TEXT,
     data_criacao TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     data_atualizacao TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
@@ -214,6 +220,15 @@ CREATE TABLE IF NOT EXISTS sessoes_pomodoro (
     materia_id UUID REFERENCES materias_estudo(id) ON DELETE SET NULL
 );
 
+-- Tabela de Categorias Financeiras
+CREATE TABLE IF NOT EXISTS categorias_financeiras (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nome VARCHAR(255) NOT NULL,
+    descricao TEXT,
+    data_criacao TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    data_atualizacao TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
 -- Tabela de Configurações do Sistema
 CREATE TABLE IF NOT EXISTS configuracoes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -230,6 +245,7 @@ CREATE INDEX IF NOT EXISTS idx_versoes_projeto_id ON versoes(projeto_id);
 CREATE INDEX IF NOT EXISTS idx_transacoes_cliente_id ON transacoes(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_transacoes_projeto_id ON transacoes(projeto_id);
 CREATE INDEX IF NOT EXISTS idx_transacoes_data ON transacoes(data);
+CREATE INDEX IF NOT EXISTS idx_transacoes_periodicidade ON transacoes(periodicidade);
 CREATE INDEX IF NOT EXISTS idx_lancamentos_cliente_id ON lancamentos(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_lancamentos_projeto_id ON lancamentos(projeto_id);
 CREATE INDEX IF NOT EXISTS idx_orcamentos_cliente_id ON orcamentos(cliente_id);
@@ -246,21 +262,53 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Triggers para atualizar data_atualizacao
+-- Triggers para atualizar data_atualizacao (idempotente - pode ser executado múltiplas vezes)
+DROP TRIGGER IF EXISTS update_clientes_updated_at ON clientes;
 CREATE TRIGGER update_clientes_updated_at BEFORE UPDATE ON clientes FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_projetos_updated_at ON projetos;
 CREATE TRIGGER update_projetos_updated_at BEFORE UPDATE ON projetos FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_tarefas_updated_at ON tarefas;
 CREATE TRIGGER update_tarefas_updated_at BEFORE UPDATE ON tarefas FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_versoes_updated_at ON versoes;
 CREATE TRIGGER update_versoes_updated_at BEFORE UPDATE ON versoes FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_transacoes_updated_at ON transacoes;
 CREATE TRIGGER update_transacoes_updated_at BEFORE UPDATE ON transacoes FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_categorias_financeiras_updated_at ON categorias_financeiras;
+CREATE TRIGGER update_categorias_financeiras_updated_at BEFORE UPDATE ON categorias_financeiras FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_lancamentos_updated_at ON lancamentos;
 CREATE TRIGGER update_lancamentos_updated_at BEFORE UPDATE ON lancamentos FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_orcamentos_updated_at ON orcamentos;
 CREATE TRIGGER update_orcamentos_updated_at BEFORE UPDATE ON orcamentos FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_recibos_updated_at ON recibos;
 CREATE TRIGGER update_recibos_updated_at BEFORE UPDATE ON recibos FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_ideias_updated_at ON ideias_monetizacao;
 CREATE TRIGGER update_ideias_updated_at BEFORE UPDATE ON ideias_monetizacao FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_conversas_ia_updated_at ON conversas_ia;
 CREATE TRIGGER update_conversas_ia_updated_at BEFORE UPDATE ON conversas_ia FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_arquivos_workspace_updated_at ON arquivos_workspace;
 CREATE TRIGGER update_arquivos_workspace_updated_at BEFORE UPDATE ON arquivos_workspace FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_temas_estudo_updated_at ON temas_estudo;
 CREATE TRIGGER update_temas_estudo_updated_at BEFORE UPDATE ON temas_estudo FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_materias_estudo_updated_at ON materias_estudo;
 CREATE TRIGGER update_materias_estudo_updated_at BEFORE UPDATE ON materias_estudo FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_aulas_estudo_updated_at ON aulas_estudo;
 CREATE TRIGGER update_aulas_estudo_updated_at BEFORE UPDATE ON aulas_estudo FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_configuracoes_updated_at ON configuracoes;
 CREATE TRIGGER update_configuracoes_updated_at BEFORE UPDATE ON configuracoes FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Desabilitar Row Level Security para desenvolvimento (opcional)
@@ -270,6 +318,7 @@ ALTER TABLE projetos DISABLE ROW LEVEL SECURITY;
 ALTER TABLE tarefas DISABLE ROW LEVEL SECURITY;
 ALTER TABLE versoes DISABLE ROW LEVEL SECURITY;
 ALTER TABLE transacoes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE categorias_financeiras DISABLE ROW LEVEL SECURITY;
 ALTER TABLE lancamentos DISABLE ROW LEVEL SECURITY;
 ALTER TABLE orcamentos DISABLE ROW LEVEL SECURITY;
 ALTER TABLE recibos DISABLE ROW LEVEL SECURITY;
