@@ -1,4 +1,5 @@
 // Database Index - Exporta todas as funcionalidades do banco de dados
+import { testConnection } from './connection'
 export { query, getClient, beginTransaction, commitTransaction, rollbackTransaction, testConnection, closePool } from './connection'
 export { ClientesRepository } from './repositories/clientes'
 export { ProjetosRepository } from './repositories/projetos'
