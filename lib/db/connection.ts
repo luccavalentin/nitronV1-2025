@@ -4,16 +4,34 @@
 import { Pool, PoolConfig } from 'pg'
 
 // Configuração do pool de conexões
-const poolConfig: PoolConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'nitronflow',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || '',
-  max: 20, // Máximo de conexões no pool
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+// Suporta connection string (para serviços como Supabase/Neon) ou variáveis individuais
+const getPoolConfig = (): PoolConfig => {
+  // Se houver uma connection string, use ela (prioridade)
+  if (process.env.DATABASE_URL) {
+    return {
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    }
+  }
+
+  // Caso contrário, use variáveis individuais
+  return {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432'),
+    database: process.env.DB_NAME || 'nitronflow',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || '',
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    max: 20, // Máximo de conexões no pool
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  }
 }
+
+const poolConfig = getPoolConfig()
 
 // Criar pool de conexões
 const pool = new Pool(poolConfig)
