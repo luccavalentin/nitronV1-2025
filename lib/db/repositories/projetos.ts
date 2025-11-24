@@ -30,8 +30,8 @@ export class ProjetosRepository {
   // Criar novo projeto
   static async create(projeto: Omit<Projeto, 'id' | 'dataCriacao'>): Promise<Projeto> {
     const result = await query(
-      `INSERT INTO projetos (nome, descricao, cliente_id, status, progresso, prioridade, orcamento, data_inicio, data_fim, roadmap)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO projetos (nome, descricao, cliente_id, status, progresso, prioridade, orcamento, data_inicio, roadmap)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
         projeto.nome,
@@ -42,7 +42,6 @@ export class ProjetosRepository {
         projeto.prioridade || 'media',
         projeto.orcamento || null,
         projeto.dataInicio || null,
-        projeto.dataFim || null,
         projeto.roadmap ? JSON.stringify(projeto.roadmap) : null,
       ]
     )
@@ -87,10 +86,6 @@ export class ProjetosRepository {
       fields.push(`data_inicio = $${paramIndex++}`)
       values.push(projeto.dataInicio)
     }
-    if (projeto.dataFim !== undefined) {
-      fields.push(`data_fim = $${paramIndex++}`)
-      values.push(projeto.dataFim)
-    }
     if (projeto.roadmap !== undefined) {
       fields.push(`roadmap = $${paramIndex++}`)
       values.push(projeto.roadmap ? JSON.stringify(projeto.roadmap) : null)
@@ -126,7 +121,6 @@ export class ProjetosRepository {
       prioridade: row.prioridade,
       orcamento: row.orcamento ? parseFloat(row.orcamento) : undefined,
       dataInicio: row.data_inicio,
-      dataFim: row.data_fim,
       roadmap: row.roadmap ? JSON.parse(row.roadmap) : undefined,
       dataCriacao: row.data_criacao,
     }
