@@ -62,7 +62,7 @@ export default function VersoesPage() {
     }
     acc[versao.projetoId].push(versao)
     return acc
-  }, {} as Record<string, typeof versoes>)
+  }, {} as Record<string, Versao[]>)
 
   // Ordenar versões por número (mais recente primeiro)
   Object.keys(versoesPorProjeto).forEach((projetoId) => {
@@ -71,7 +71,7 @@ export default function VersoesPage() {
     })
   })
 
-  const getUltimaVersao = (versoes: typeof versoes) => {
+  const getUltimaVersao = (versoes: Versao[]) => {
     return versoes[0]?.numero || 'N/A'
   }
 
