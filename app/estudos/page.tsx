@@ -22,6 +22,28 @@ export default function EstudosPage() {
   const totalAulas = aulas.length
   const progressoGeral = totalAulas > 0 ? (aulasConcluidas / totalAulas) * 100 : 0
 
+  const handleTimerComplete = useCallback(() => {
+    setIsRunning(false)
+    setPomodoroCount((prev) => {
+      if (!isBreak) {
+        // Pomodoro completo, iniciar pausa
+        const novoCount = prev + 1
+        setIsBreak(true)
+        // Verificar se é pausa longa
+        const isPausaLonga = novoCount > 0 && novoCount % configuracoes.pomodoroPausaLongaApos === 0
+        setMinutes(isPausaLonga ? configuracoes.pomodoroTempoPausaLonga : configuracoes.pomodoroTempoPausaCurta)
+        setSeconds(0)
+        return novoCount
+      } else {
+        // Pausa completa, voltar ao trabalho
+        setIsBreak(false)
+        setMinutes(configuracoes.pomodoroTempoTrabalho)
+        setSeconds(0)
+        return prev
+      }
+    })
+  }, [isBreak, configuracoes.pomodoroPausaLongaApos, configuracoes.pomodoroTempoPausaLonga, configuracoes.pomodoroTempoPausaCurta, configuracoes.pomodoroTempoTrabalho])
+
   useEffect(() => {
     if (isRunning) {
       intervalRef.current = setInterval(() => {
@@ -50,25 +72,6 @@ export default function EstudosPage() {
       }
     }
   }, [isRunning, minutes, handleTimerComplete])
-
-  const handleTimerComplete = () => {
-    setIsRunning(false)
-    if (!isBreak) {
-      // Pomodoro completo, iniciar pausa
-      const novoCount = pomodoroCount + 1
-      setPomodoroCount(novoCount)
-      setIsBreak(true)
-      // Verificar se é pausa longa
-      const isPausaLonga = novoCount > 0 && novoCount % configuracoes.pomodoroPausaLongaApos === 0
-      setMinutes(isPausaLonga ? configuracoes.pomodoroTempoPausaLonga : configuracoes.pomodoroTempoPausaCurta)
-      setSeconds(0)
-    } else {
-      // Pausa completa, voltar ao trabalho
-      setIsBreak(false)
-      setMinutes(configuracoes.pomodoroTempoTrabalho)
-      setSeconds(0)
-    }
-  }
 
   const handleStart = () => {
     setIsRunning(true)
