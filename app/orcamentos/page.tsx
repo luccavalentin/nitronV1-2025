@@ -1273,7 +1273,7 @@ export default function OrcamentosPage() {
                 </p>
                 <div className="flex gap-3">
                   <button
-                    onClick={handleBaixarPDF}
+                    onClick={() => documentoParaVisualizar && handleBaixarPDF(documentoParaVisualizar, tipoDocumento)}
                     className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl transition-all font-medium shadow-lg shadow-green-500/20"
                   >
                     <Download size={18} />
