@@ -90,15 +90,15 @@ export default function TarefasPage() {
   const getPrioridadeColor = (prioridade: string) => {
     switch (prioridade) {
       case 'urgente':
-        return 'bg-red-500/20 text-red-400 border-red-500/50'
+        return 'bg-gradient-to-r from-red-500 to-red-600 text-white border-red-600 shadow-lg shadow-red-500/50 font-bold'
       case 'alta':
-        return 'bg-orange-500/20 text-orange-400 border-orange-500/50'
+        return 'bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-600 shadow-lg shadow-orange-500/50 font-bold'
       case 'media':
-        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50'
+        return 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-yellow-600 shadow-lg shadow-yellow-500/50 font-bold'
       case 'baixa':
-        return 'bg-green-500/20 text-green-400 border-green-500/50'
+        return 'bg-gradient-to-r from-green-500 to-green-600 text-white border-green-600 shadow-lg shadow-green-500/50 font-bold'
       default:
-        return 'bg-slate-500/20 text-slate-400 border-slate-500/50'
+        return 'bg-slate-500/20 text-slate-300 border-slate-500/50'
     }
   }
 
@@ -226,12 +226,12 @@ export default function TarefasPage() {
                     onChange={(e) => setFiltroStatus(e.target.value)}
                     className="bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
                   >
-                    <option value="todos">Todos os Status</option>
-                    <option value="todo">A Fazer</option>
-                    <option value="in_progress">Em Progresso</option>
-                    <option value="in_review">Em Revisão</option>
-                    <option value="blocked">Bloqueada</option>
-                    <option value="completed">Concluída</option>
+                    <option value="todos" className="bg-slate-700 text-white">Todos os Status</option>
+                    <option value="todo" className="bg-slate-700 text-white">A Fazer</option>
+                    <option value="in_progress" className="bg-slate-700 text-white">Em Progresso</option>
+                    <option value="in_review" className="bg-slate-700 text-white">Em Revisão</option>
+                    <option value="blocked" className="bg-slate-700 text-white">Bloqueada</option>
+                    <option value="completed" className="bg-slate-700 text-white">Concluída</option>
                   </select>
                 </div>
                 
@@ -240,11 +240,11 @@ export default function TarefasPage() {
                   onChange={(e) => setFiltroPrioridade(e.target.value)}
                   className="bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
                 >
-                  <option value="todas">Todas as Prioridades</option>
-                  <option value="urgente">Urgente</option>
-                  <option value="alta">Alta</option>
-                  <option value="media">Média</option>
-                  <option value="baixa">Baixa</option>
+                  <option value="todas" className="bg-slate-700 text-white">Todas as Prioridades</option>
+                  <option value="urgente" className="bg-slate-700 text-white">Urgente</option>
+                  <option value="alta" className="bg-slate-700 text-white">Alta</option>
+                  <option value="media" className="bg-slate-700 text-white">Média</option>
+                  <option value="baixa" className="bg-slate-700 text-white">Baixa</option>
                 </select>
                 
                 <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl transition-all font-medium shadow-lg shadow-purple-500/20">
@@ -314,8 +314,11 @@ export default function TarefasPage() {
                           )}
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-                          <span className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${getPrioridadeColor(tarefa.prioridade)}`}>
-                            {tarefa.prioridade.charAt(0).toUpperCase() + tarefa.prioridade.slice(1)}
+                          <span className={`px-4 py-2 rounded-xl text-xs font-bold border-2 transition-all duration-300 hover:scale-110 ${getPrioridadeColor(tarefa.prioridade)}`}>
+                            {tarefa.prioridade === 'urgente' ? '🔴 URGENTE' : 
+                             tarefa.prioridade === 'alta' ? '🟠 ALTA' :
+                             tarefa.prioridade === 'media' ? '🟡 MÉDIA' :
+                             '🟢 BAIXA'}
                           </span>
                           <span className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${getStatusColor(tarefa.status)}`}>
                             {getStatusLabel(tarefa.status)}
@@ -387,7 +390,7 @@ export default function TarefasPage() {
                 /* Formulário de Edição */
                 <>
                   <div>
-                    <label className="block text-slate-400 text-sm mb-2 font-medium">Título</label>
+                    <label className="block text-white text-sm mb-2 font-medium">Título</label>
                     <input
                       type="text"
                       value={formData.titulo || ''}
@@ -398,7 +401,7 @@ export default function TarefasPage() {
                   </div>
 
                   <div>
-                    <label className="block text-slate-400 text-sm mb-2 font-medium">Descrição</label>
+                    <label className="block text-white text-sm mb-2 font-medium">Descrição</label>
                     <textarea
                       value={formData.descricao || ''}
                       onChange={(e) => setFormData({ ...formData, descricao: e.target.value.toUpperCase() })}
@@ -410,37 +413,37 @@ export default function TarefasPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-slate-400 text-sm mb-2 font-medium">Status</label>
+                      <label className="block text-white text-sm mb-2 font-medium">Status</label>
                       <select
                         value={formData.status || 'todo'}
                         onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
                         className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
                       >
-                        <option value="todo">A Fazer</option>
-                        <option value="in_progress">Em Progresso</option>
-                        <option value="in_review">Em Revisão</option>
-                        <option value="blocked">Bloqueada</option>
-                        <option value="completed">Concluída</option>
+                        <option value="todo" className="bg-slate-700 text-white">A Fazer</option>
+                        <option value="in_progress" className="bg-slate-700 text-white">Em Progresso</option>
+                        <option value="in_review" className="bg-slate-700 text-white">Em Revisão</option>
+                        <option value="blocked" className="bg-slate-700 text-white">Bloqueada</option>
+                        <option value="completed" className="bg-slate-700 text-white">Concluída</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-slate-400 text-sm mb-2 font-medium">Prioridade</label>
+                      <label className="block text-white text-sm mb-2 font-medium">Prioridade</label>
                       <select
                         value={formData.prioridade || 'media'}
                         onChange={(e) => setFormData({ ...formData, prioridade: e.target.value as any })}
                         className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
                       >
-                        <option value="urgente">Urgente</option>
-                        <option value="alta">Alta</option>
-                        <option value="media">Média</option>
-                        <option value="baixa">Baixa</option>
+                        <option value="urgente" className="bg-slate-700 text-white">Urgente</option>
+                        <option value="alta" className="bg-slate-700 text-white">Alta</option>
+                        <option value="media" className="bg-slate-700 text-white">Média</option>
+                        <option value="baixa" className="bg-slate-700 text-white">Baixa</option>
                       </select>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-slate-400 text-sm mb-2 font-medium">Data de Vencimento</label>
+                    <label className="block text-white text-sm mb-2 font-medium">Data de Vencimento</label>
                     <input
                       type="date"
                       value={formData.dataVencimento ? format(new Date(formData.dataVencimento), 'yyyy-MM-dd') : ''}
@@ -450,15 +453,15 @@ export default function TarefasPage() {
                   </div>
 
                   <div>
-                    <label className="block text-slate-400 text-sm mb-2 font-medium">Projeto</label>
+                    <label className="block text-white text-sm mb-2 font-medium">Projeto</label>
                     <select
                       value={formData.projetoId || ''}
                       onChange={(e) => setFormData({ ...formData, projetoId: e.target.value || undefined })}
                       className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
                     >
-                      <option value="">Nenhum projeto</option>
+                      <option value="" className="bg-slate-700 text-white">Nenhum projeto</option>
                       {projetos.map((projeto) => (
-                        <option key={projeto.id} value={projeto.id}>
+                        <option key={projeto.id} value={projeto.id} className="bg-slate-700 text-white">
                           {projeto.nome}
                         </option>
                       ))}
@@ -466,7 +469,7 @@ export default function TarefasPage() {
                   </div>
 
                   <div>
-                    <label className="block text-slate-400 text-sm mb-2 font-medium">Tags (separadas por vírgula)</label>
+                    <label className="block text-white text-sm mb-2 font-medium">Tags (separadas por vírgula)</label>
                     <input
                       type="text"
                       value={formData.tags?.join(', ') || ''}
@@ -509,21 +512,24 @@ export default function TarefasPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-slate-700/30 rounded-xl p-4 border border-slate-600/50">
-                      <div className="text-slate-400 text-sm mb-2 font-medium">Status</div>
+                      <div className="text-slate-300 text-sm mb-2 font-medium">Status</div>
                       <div className="flex items-center gap-2">
                         {getStatusIcon(tarefaSelecionada.status)}
                         <span className="text-white font-semibold">{getStatusLabel(tarefaSelecionada.status)}</span>
                       </div>
                     </div>
                     <div className="bg-slate-700/30 rounded-xl p-4 border border-slate-600/50">
-                      <div className="text-slate-400 text-sm mb-2 font-medium">Prioridade</div>
-                      <span className={`inline-block px-3 py-1 rounded-lg text-sm font-semibold border ${getPrioridadeColor(tarefaSelecionada.prioridade)}`}>
-                        {tarefaSelecionada.prioridade.charAt(0).toUpperCase() + tarefaSelecionada.prioridade.slice(1)}
+                      <div className="text-slate-300 text-sm mb-2 font-medium">Prioridade</div>
+                      <span className={`inline-block px-4 py-2 rounded-xl text-sm font-bold border-2 ${getPrioridadeColor(tarefaSelecionada.prioridade)}`}>
+                        {tarefaSelecionada.prioridade === 'urgente' ? '🔴 URGENTE' : 
+                         tarefaSelecionada.prioridade === 'alta' ? '🟠 ALTA' :
+                         tarefaSelecionada.prioridade === 'media' ? '🟡 MÉDIA' :
+                         '🟢 BAIXA'}
                       </span>
                     </div>
                     {tarefaSelecionada.projetoId && (
                       <div className="bg-slate-700/30 rounded-xl p-4 border border-slate-600/50">
-                        <div className="text-slate-400 text-sm mb-2 font-medium">Projeto</div>
+                        <div className="text-slate-300 text-sm mb-2 font-medium">Projeto</div>
                         <Link
                           href={`/projetos/${tarefaSelecionada.projetoId}`}
                           className="text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-2"
@@ -535,7 +541,7 @@ export default function TarefasPage() {
                     )}
                     {tarefaSelecionada.dataVencimento && (
                       <div className="bg-slate-700/30 rounded-xl p-4 border border-slate-600/50">
-                        <div className="text-slate-400 text-sm mb-2 font-medium">Data de Vencimento</div>
+                        <div className="text-slate-300 text-sm mb-2 font-medium">Data de Vencimento</div>
                         <div className={`font-semibold flex items-center gap-2 ${isAtrasada(tarefaSelecionada.dataVencimento) ? 'text-red-400' : 'text-white'}`}>
                           <Calendar size={16} />
                           {format(new Date(tarefaSelecionada.dataVencimento), "dd/MM/yyyy")}
@@ -547,7 +553,7 @@ export default function TarefasPage() {
 
                   {tarefaSelecionada.tags && tarefaSelecionada.tags.length > 0 && (
                     <div>
-                      <div className="text-slate-400 text-sm mb-3 font-medium">Tags</div>
+                      <div className="text-slate-300 text-sm mb-3 font-medium">Tags</div>
                       <div className="flex flex-wrap gap-2">
                         {tarefaSelecionada.tags.map((tag, index) => (
                           <span

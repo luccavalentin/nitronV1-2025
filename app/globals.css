@@ -126,3 +126,23 @@ body {
   animation: float 3s ease-in-out infinite;
 }
 
+/* Remover spinners de inputs numéricos */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Garantir fontes escuras em todo o sistema */
+input, textarea, select {
+  color: #1e293b !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #64748b !important;
+}
+

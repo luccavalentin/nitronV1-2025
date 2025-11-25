@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Layout from '@/components/Layout'
 import Modal from '@/components/Modal'
 import { useStore } from '@/store/useStore'
@@ -14,20 +14,43 @@ export default function DashboardPage() {
   const [modalAberto, setModalAberto] = useState<string | null>(null)
   const [valoresVisiveis, setValoresVisiveis] = useState(true)
 
-  const projetosAtivos = projetos.filter((p) => p.status === 'em_progresso').length
-  const projetosConcluidos = projetos.filter((p) => p.status === 'concluido').length
-  const tarefasAtivas = tarefas.filter((t) => t.status !== 'completed').length
-  const tarefasAtrasadas = tarefas.filter((t) => {
-    if (!t.dataVencimento) return false
-    return new Date(t.dataVencimento) < new Date() && t.status !== 'completed'
-  }).length
-  const receitaTotal = transacoes
-    .filter((t) => t.tipo === 'receita')
-    .reduce((sum, t) => sum + t.valor, 0)
-  const despesaTotal = transacoes
-    .filter((t) => t.tipo === 'despesa')
-    .reduce((sum, t) => sum + t.valor, 0)
-  const saldo = receitaTotal - despesaTotal
+  // Usar useMemo para garantir que os valores sejam recalculados quando os dados mudarem
+  const valoresCards = useMemo(() => {
+    const projetosAtivos = projetos.filter((p) => p.status === 'em_progresso').length
+    const projetosConcluidos = projetos.filter((p) => p.status === 'concluido').length
+    const tarefasAtivas = tarefas.filter((t) => t.status !== 'completed').length
+    const tarefasAtrasadas = tarefas.filter((t) => {
+      if (!t.dataVencimento) return false
+      return new Date(t.dataVencimento) < new Date() && t.status !== 'completed'
+    }).length
+    
+    // Separar receitas por target
+    const receitas = transacoes.filter((t) => t.tipo === 'receita')
+    const receitasPessoais = receitas.filter((t) => !t.target || t.target === 'pessoal')
+    const receitasEmpresa = receitas.filter((t) => t.target === 'empresa')
+    
+    const receitaPessoalTotal = receitasPessoais.reduce((sum, t) => sum + t.valor, 0)
+    const receitaEmpresaTotal = receitasEmpresa.reduce((sum, t) => sum + t.valor, 0)
+    const receitaTotal = receitaPessoalTotal + receitaEmpresaTotal
+    const despesaTotal = transacoes
+      .filter((t) => t.tipo === 'despesa')
+      .reduce((sum, t) => sum + t.valor, 0)
+    const saldo = receitaTotal - despesaTotal
+
+    return {
+      projetosAtivos,
+      projetosConcluidos,
+      tarefasAtivas,
+      tarefasAtrasadas,
+      receitaPessoalTotal,
+      receitaEmpresaTotal,
+      receitaTotal,
+      despesaTotal,
+      saldo
+    }
+  }, [projetos, tarefas, transacoes])
+
+  const { projetosAtivos, projetosConcluidos, tarefasAtivas, tarefasAtrasadas, receitaPessoalTotal, receitaEmpresaTotal, receitaTotal, despesaTotal, saldo } = valoresCards
 
   // Dados para gráfico de receita e despesa (últimos 6 meses)
   const receitaMensal = [

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Calendar, X } from 'lucide-react'
+import { Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format, isValid, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns'
 
 interface DatePickerProps {
@@ -120,14 +120,15 @@ export default function DatePicker({
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
 
   const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+  const mesesNomes = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
   const selectedDate = value ? (typeof value === 'string' ? new Date(value) : value) : null
 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
       {label && (
-        <label className="block text-slate-300 text-sm mb-2.5 font-semibold tracking-wide">
-          {label} {required && <span className="text-red-400">*</span>}
+        <label className="block text-slate-700 text-sm mb-2 font-semibold tracking-wide">
+          {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
       <div className="relative">
@@ -137,25 +138,25 @@ export default function DatePicker({
           onChange={handleInputChange}
           onFocus={() => setShowCalendar(true)}
           placeholder={placeholder}
-          className="w-full bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-2 border-slate-600/60 rounded-xl pl-4 pr-20 py-3.5 text-white text-base font-medium placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/80 focus:shadow-lg focus:shadow-blue-500/20 transition-all duration-200 hover:border-slate-500/80"
+          className="w-full bg-white border-2 border-slate-300 rounded-xl pl-4 pr-20 py-3 text-slate-800 text-base font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 hover:border-slate-400"
         />
         <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
           {inputValue && (
             <button
               type="button"
               onClick={handleClear}
-              className="p-2 hover:bg-red-500/20 rounded-lg transition-all duration-200 group"
+              className="p-1.5 hover:bg-red-50 rounded-lg transition-all duration-200 group"
             >
-              <X className="text-slate-400 group-hover:text-red-400 transition-colors" size={16} />
+              <X className="text-slate-400 group-hover:text-red-500 transition-colors" size={16} />
             </button>
           )}
           <button
             type="button"
             onClick={() => setShowCalendar(!showCalendar)}
-            className={`p-2 rounded-lg transition-all duration-200 ${
+            className={`p-1.5 rounded-lg transition-all duration-200 ${
               showCalendar 
-                ? 'bg-blue-500/20 text-blue-400' 
-                : 'hover:bg-blue-500/10 text-slate-400 hover:text-blue-400'
+                ? 'bg-blue-100 text-blue-600' 
+                : 'hover:bg-slate-100 text-slate-500 hover:text-blue-600'
             }`}
           >
             <Calendar size={18} />
@@ -164,39 +165,39 @@ export default function DatePicker({
 
         {/* Calendário */}
         {showCalendar && (
-          <div className="absolute z-50 mt-2 bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-slate-700/80 rounded-2xl shadow-2xl shadow-black/50 p-5 w-80 backdrop-blur-xl">
+          <div className="absolute z-50 mt-2 bg-white border-2 border-slate-200 rounded-2xl shadow-2xl shadow-slate-900/20 p-6 w-80">
             {/* Navegação do mês */}
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center justify-between mb-6">
               <button
                 type="button"
                 onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-                className="p-2.5 hover:bg-blue-500/20 rounded-xl transition-all duration-200 text-slate-300 hover:text-blue-400 hover:scale-110"
+                className="p-2 hover:bg-slate-100 rounded-lg transition-all duration-200 text-slate-600 hover:text-blue-600 hover:scale-110"
               >
-                ←
+                <ChevronLeft size={20} />
               </button>
-              <div className="text-white font-bold text-lg capitalize tracking-wide">
-                {format(currentMonth, 'MMMM yyyy')}
+              <div className="text-slate-800 font-bold text-lg capitalize tracking-wide">
+                {mesesNomes[currentMonth.getMonth()]} {currentMonth.getFullYear()}
               </div>
               <button
                 type="button"
                 onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-                className="p-2.5 hover:bg-blue-500/20 rounded-xl transition-all duration-200 text-slate-300 hover:text-blue-400 hover:scale-110"
+                className="p-2 hover:bg-slate-100 rounded-lg transition-all duration-200 text-slate-600 hover:text-blue-600 hover:scale-110"
               >
-                →
+                <ChevronRight size={20} />
               </button>
             </div>
 
             {/* Dias da semana */}
-            <div className="grid grid-cols-7 gap-1.5 mb-3">
+            <div className="grid grid-cols-7 gap-2 mb-3">
               {weekDays.map((day) => (
-                <div key={day} className="text-center text-slate-400 text-xs font-bold py-2.5 tracking-wide">
+                <div key={day} className="text-center text-slate-600 text-xs font-bold py-2 tracking-wide">
                   {day}
                 </div>
               ))}
             </div>
 
             {/* Dias do calendário */}
-            <div className="grid grid-cols-7 gap-1.5">
+            <div className="grid grid-cols-7 gap-2">
               {days.map((day) => {
                 const isCurrentMonth = isSameMonth(day, currentMonth)
                 const isSelected = selectedDate && isSameDay(day, selectedDate)
@@ -212,12 +213,12 @@ export default function DatePicker({
                     onClick={() => !isDisabled && handleDateSelect(day)}
                     disabled={isDisabled}
                     className={`
-                      h-10 rounded-xl transition-all duration-200 text-sm font-semibold
-                      ${!isCurrentMonth ? 'text-slate-600/50' : 'text-slate-200'}
+                      h-10 rounded-lg transition-all duration-200 text-sm font-semibold
+                      ${!isCurrentMonth ? 'text-slate-300' : 'text-slate-700'}
                       ${isSelected ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold shadow-lg shadow-blue-500/50 scale-105' : ''}
-                      ${!isSelected && isCurrentMonth && !isDisabled ? 'hover:bg-blue-500/20 hover:text-blue-300 hover:scale-105' : ''}
-                      ${isToday && !isSelected ? 'border-2 border-blue-500/60 bg-blue-500/10 text-blue-300 font-bold' : ''}
-                      ${isDisabled ? 'opacity-20 cursor-not-allowed' : 'cursor-pointer'}
+                      ${!isSelected && isCurrentMonth && !isDisabled ? 'hover:bg-blue-50 hover:text-blue-600 hover:scale-105' : ''}
+                      ${isToday && !isSelected ? 'border-2 border-blue-500 bg-blue-50 text-blue-600 font-bold' : ''}
+                      ${isDisabled ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}
                     `}
                   >
                     {format(day, 'd')}
@@ -227,11 +228,11 @@ export default function DatePicker({
             </div>
 
             {/* Botão hoje */}
-            <div className="mt-5 pt-4 border-t border-slate-700/60">
+            <div className="mt-6 pt-4 border-t border-slate-200">
               <button
                 type="button"
                 onClick={() => handleDateSelect(new Date())}
-                className="w-full px-4 py-2.5 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 hover:from-blue-500/30 hover:to-cyan-500/30 border-2 border-blue-500/50 hover:border-blue-400/70 text-blue-300 hover:text-blue-200 rounded-xl transition-all duration-200 text-sm font-bold tracking-wide shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20"
+                className="w-full px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl transition-all duration-200 text-sm font-bold tracking-wide shadow-md hover:shadow-lg"
               >
                 Hoje
               </button>
@@ -242,4 +243,3 @@ export default function DatePicker({
     </div>
   )
 }
-

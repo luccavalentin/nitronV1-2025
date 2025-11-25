@@ -6,13 +6,13 @@ import Layout from '@/components/Layout'
 import Modal from '@/components/Modal'
 import DatePicker from '@/components/DatePicker'
 import { useStore, Transacao, Lancamento } from '@/store/useStore'
-import { Plus, Edit, Trash2, TrendingUp, TrendingDown, Download, Search, Filter, DollarSign, Target, BarChart3, PieChart, LineChart, Calendar, Eye, EyeOff, ArrowRight, Briefcase, User, Tag, AlertCircle, CheckCircle2, Clock, Activity, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Receipt, FileText, Save, X } from 'lucide-react'
+import { Plus, Edit, Trash2, TrendingUp, TrendingDown, Download, Search, Filter, DollarSign, Target, BarChart3, PieChart, LineChart, Calendar, Eye, EyeOff, ArrowRight, Briefcase, User, Tag, AlertCircle, CheckCircle2, Clock, Activity, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Receipt, FileText, Save, X, Shield, PiggyBank, Settings } from 'lucide-react'
 import { LineChart as RechartsLineChart, Line, PieChart as RechartsPieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart, ComposedChart } from 'recharts'
 import { format, addMonths, addDays, addWeeks, addYears, startOfMonth, endOfMonth, isSameMonth, isSameYear } from 'date-fns'
 
 export default function FincorePage() {
-  const { transacoes, lancamentos, projetos, clientes, deleteTransacao, addTransacao, updateTransacao, deleteLancamento, addLancamento, updateLancamento, categoriasFinanceiras, addCategoriaFinanceira } = useStore()
-  const [abaAtiva, setAbaAtiva] = useState<'receitas' | 'despesas' | 'fluxo-caixa' | 'analises'>('analises')
+  const { transacoes, lancamentos, projetos, clientes, deleteTransacao, addTransacao, updateTransacao, deleteLancamento, addLancamento, updateLancamento, categoriasFinanceiras, addCategoriaFinanceira, reservaEmergencia, updateReservaEmergencia } = useStore()
+  const [abaAtiva, setAbaAtiva] = useState<'receitas' | 'despesas' | 'reserva-emergencia' | 'analises'>('analises')
   const [filtroTipo, setFiltroTipo] = useState<string>('todos')
   const [dataInicial, setDataInicial] = useState('')
   const [dataFinal, setDataFinal] = useState('')
@@ -41,6 +41,11 @@ export default function FincorePage() {
   const hoje = new Date()
   const [filtroDataInicio, setFiltroDataInicio] = useState<Date | null>(startOfMonth(hoje))
   const [filtroDataFim, setFiltroDataFim] = useState<Date | null>(endOfMonth(hoje))
+  
+  // Estados para Reserva de Emergência
+  const [mostrarModalConfigReserva, setMostrarModalConfigReserva] = useState(false)
+  const [percentualPessoal, setPercentualPessoal] = useState(reservaEmergencia?.percentualPessoal || 10)
+  const [percentualEmpresa, setPercentualEmpresa] = useState(reservaEmergencia?.percentualEmpresa || 10)
 
   // Filtros para transações
   const transacoesFiltradas = transacoes.filter((transacao) => {
@@ -141,6 +146,35 @@ export default function FincorePage() {
   // Receitas e despesas filtradas (para cálculos - todas as parcelas)
   const receitasFiltradas = transacoesFiltradas.filter(t => t.tipo === 'receita')
   const despesasFiltradas = transacoesFiltradas.filter(t => t.tipo === 'despesa')
+
+  // Calcular totais do período filtrado
+  const totalReceitasPeriodo = receitasFiltradas.reduce((sum, t) => sum + t.valor, 0)
+  const totalDespesasPeriodo = despesasFiltradas.reduce((sum, t) => sum + t.valor, 0)
+  const saldoPeriodo = totalReceitasPeriodo - totalDespesasPeriodo
+
+  // Calcular soma das parcelas selecionadas
+  const somaParcelasSelecionadas = Array.from(transacoesSelecionadas).reduce((sum, id) => {
+    const transacao = transacoes.find(t => t.id === id)
+    if (transacao) {
+      // Se for uma parcela, buscar todas as parcelas do grupo
+      const relacionadas = obterTransacoesRelacionadas(transacao)
+      // Se houver filtro de período, somar apenas as parcelas que estão no período filtrado
+      // Caso contrário, somar todas as parcelas do grupo
+      if (filtroDataInicio || filtroDataFim) {
+        const parcelasNoPeriodo = relacionadas.filter(t => {
+          const dataTransacao = new Date(t.data)
+          if (filtroDataInicio && dataTransacao < filtroDataInicio) return false
+          if (filtroDataFim && dataTransacao > filtroDataFim) return false
+          return true
+        })
+        return sum + parcelasNoPeriodo.reduce((s, t) => s + t.valor, 0)
+      } else {
+        // Sem filtro, somar todas as parcelas do grupo
+        return sum + relacionadas.reduce((s, t) => s + t.valor, 0)
+      }
+    }
+    return sum
+  }, 0)
   
   // Receitas e despesas do mês atual (para cálculos dos cards - sempre mês atual)
   const mesAtualInicio = startOfMonth(hoje)
@@ -150,6 +184,10 @@ export default function FincorePage() {
     new Date(t.data) >= mesAtualInicio && 
     new Date(t.data) <= mesAtualFim
   )
+  // Separar receitas por target
+  const receitasPessoaisMesAtual = receitasMesAtual.filter(t => !t.target || t.target === 'pessoal')
+  const receitasEmpresaMesAtual = receitasMesAtual.filter(t => t.target === 'empresa')
+  
   const despesasMesAtual = transacoes.filter(t => 
     t.tipo === 'despesa' && 
     new Date(t.data) >= mesAtualInicio && 
@@ -158,14 +196,18 @@ export default function FincorePage() {
   
   // Todas as receitas e despesas (para cálculos gerais)
   const receitas = transacoes.filter(t => t.tipo === 'receita')
+  const receitasPessoais = receitas.filter(t => !t.target || t.target === 'pessoal')
+  const receitasEmpresa = receitas.filter(t => t.target === 'empresa')
   const despesas = transacoes.filter(t => t.tipo === 'despesa')
   const lancamentosFiltrados = lancamentos.filter((l) => {
     const matchBusca = l.descricao.toLowerCase().includes(busca.toLowerCase())
     return matchBusca
   })
 
-  // Totais do mês atual (para os cards)
-  const totalReceitasMesAtual = receitasMesAtual.reduce((sum, t) => sum + t.valor, 0)
+  // Totais do mês atual (para os cards) - separados por target
+  const totalReceitasPessoaisMesAtual = receitasPessoaisMesAtual.reduce((sum, t) => sum + t.valor, 0)
+  const totalReceitasEmpresaMesAtual = receitasEmpresaMesAtual.reduce((sum, t) => sum + t.valor, 0)
+  const totalReceitasMesAtual = totalReceitasPessoaisMesAtual + totalReceitasEmpresaMesAtual
   const totalDespesasMesAtual = despesasMesAtual.reduce((sum, t) => sum + t.valor, 0)
   const saldoMesAtual = totalReceitasMesAtual - totalDespesasMesAtual
   const margemLucroMesAtual = totalReceitasMesAtual > 0 ? ((saldoMesAtual / totalReceitasMesAtual) * 100) : 0
@@ -196,19 +238,66 @@ export default function FincorePage() {
   
   // Totais gerais (para outras análises)
   const totalReceitas = receitas.reduce((sum, t) => sum + t.valor, 0)
+  const totalReceitasPessoal = receitasPessoais.reduce((sum, t) => sum + t.valor, 0)
+  const totalReceitasEmpresa = receitasEmpresa.reduce((sum, t) => sum + t.valor, 0)
   const totalDespesas = despesas.reduce((sum, t) => sum + t.valor, 0)
   const saldo = totalReceitas - totalDespesas
   const margemLucro = totalReceitas > 0 ? ((saldo / totalReceitas) * 100) : 0
 
-  // Dados para gráfico mensal
-  const dadosMensal = [
-    { mes: 'Jul', receita: 15000, despesa: 5000, saldo: 10000 },
-    { mes: 'Ago', receita: 22000, despesa: 8000, saldo: 14000 },
-    { mes: 'Set', receita: 18000, despesa: 6000, saldo: 12000 },
-    { mes: 'Out', receita: 25000, despesa: 7000, saldo: 18000 },
-    { mes: 'Nov', receita: 30000, despesa: 10000, saldo: 20000 },
-    { mes: 'Dez', receita: 25000, despesa: 5000, saldo: 20000 },
-  ]
+  // Cálculo de reservas de emergência
+  const reservaCalculadaPessoal = (totalReceitasPessoal * percentualPessoal) / 100
+  const reservaCalculadaEmpresa = (totalReceitasEmpresa * percentualEmpresa) / 100
+
+  // Dados para gráfico mensal - calculados a partir das transações reais
+  const calcularDadosMensais = () => {
+    const hoje = new Date()
+    const meses: Record<string, { receita: number; despesa: number; mes: string; mesNumero: number; ano: number }> = {}
+    const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+    
+    // Pegar últimos 6 meses
+    for (let i = 5; i >= 0; i--) {
+      const dataMes = addMonths(hoje, -i)
+      const inicioMes = startOfMonth(dataMes)
+      const chave = format(inicioMes, 'yyyy-MM')
+      
+      meses[chave] = {
+        receita: 0,
+        despesa: 0,
+        mes: mesesNomes[inicioMes.getMonth()],
+        mesNumero: inicioMes.getMonth(),
+        ano: inicioMes.getFullYear()
+      }
+    }
+    
+    // Calcular valores reais das transações
+    transacoes.forEach(transacao => {
+      const dataTransacao = new Date(transacao.data)
+      const chave = format(startOfMonth(dataTransacao), 'yyyy-MM')
+      
+      if (meses[chave]) {
+        if (transacao.tipo === 'receita') {
+          meses[chave].receita += transacao.valor
+        } else if (transacao.tipo === 'despesa') {
+          meses[chave].despesa += transacao.valor
+        }
+      }
+    })
+    
+    // Converter para array e calcular saldo
+    return Object.values(meses)
+      .sort((a, b) => {
+        if (a.ano !== b.ano) return a.ano - b.ano
+        return a.mesNumero - b.mesNumero
+      })
+      .map(mes => ({
+        mes: mes.mes,
+        receita: mes.receita,
+        despesa: mes.despesa,
+        saldo: mes.receita - mes.despesa
+      }))
+  }
+  
+  const dadosMensal = calcularDadosMensais()
 
   // Análise por categoria
   const categorias = transacoesFiltradas.reduce((acc, t) => {
@@ -467,12 +556,25 @@ export default function FincorePage() {
   const handleSalvarTransacao = () => {
     if (modoCriacao) {
       const periodicidade = formDataTransacao.periodicidade || 'unica'
-      const quantidadeParcelas = formDataTransacao.quantidadeParcelas || 1
+      // Garantir que quantidadeParcelas seja um número inteiro válido
+      let quantidadeParcelas = formDataTransacao.quantidadeParcelas
+      if (periodicidade === 'parcelada') {
+        // Se for parcelada, quantidadeParcelas é obrigatória
+        if (!quantidadeParcelas || quantidadeParcelas < 1) {
+          alert('Por favor, informe a quantidade de parcelas (mínimo 1)')
+          return
+        }
+        quantidadeParcelas = Math.max(1, Math.floor(Number(quantidadeParcelas)))
+      } else {
+        quantidadeParcelas = quantidadeParcelas || 1
+      }
+      
       const dataInicio = formDataTransacao.dataInicio || formDataTransacao.data || new Date()
       const valor = formDataTransacao.valor || 0
       const tipo = formDataTransacao.tipo || 'receita'
       const descricao = formDataTransacao.descricao || ''
       const categoria = formDataTransacao.categoria || ''
+      const target = formDataTransacao.target || 'pessoal'
       
       // Se for única, cria apenas uma transação
       if (periodicidade === 'unica') {
@@ -485,6 +587,7 @@ export default function FincorePage() {
           data: dataInicio,
         projetoId: formDataTransacao.projetoId,
         clienteId: formDataTransacao.clienteId,
+          target,
           periodicidade: 'unica',
           status: 'pendente',
           parcelaAtual: 1,
@@ -496,10 +599,13 @@ export default function FincorePage() {
         const baseTimestamp = Date.now()
         const parcelas: Transacao[] = []
         
-        // Garantir que quantidadeParcelas seja um número válido
-        const totalParcelas = Math.max(1, Math.floor(quantidadeParcelas) || 1)
+        // Garantir que quantidadeParcelas seja um número válido e inteiro
+        // Já validado acima, mas garantir novamente aqui
+        const totalParcelas = Math.max(1, Math.floor(Number(quantidadeParcelas)) || 1)
         
-        // Criar todas as parcelas de 1 até totalParcelas
+        // IMPORTANTE: Criar EXATAMENTE o número de parcelas especificado
+        // Loop de 1 até totalParcelas (inclusive) - isso garante que todas sejam criadas
+        console.log(`Criando ${totalParcelas} parcelas para: ${descricao}`)
         for (let i = 1; i <= totalParcelas; i++) {
           const dataParcela = calcularProximaData(dataInicio, periodicidade, i)
           const descricaoParcela = totalParcelas > 1 
@@ -515,6 +621,7 @@ export default function FincorePage() {
             data: dataParcela,
             projetoId: formDataTransacao.projetoId,
             clienteId: formDataTransacao.clienteId,
+            target,
             periodicidade,
             quantidadeParcelas: totalParcelas,
             dataInicio,
@@ -524,14 +631,84 @@ export default function FincorePage() {
           })
         }
         
-        // Adiciona todas as parcelas
-        parcelas.forEach(parcela => addTransacao(parcela))
+        // Verificar se todas as parcelas foram criadas
+        if (parcelas.length !== totalParcelas) {
+          console.error(`ERRO: Esperado ${totalParcelas} parcelas, mas apenas ${parcelas.length} foram criadas!`)
+        }
+        
+        // Adiciona todas as parcelas uma por uma
+        parcelas.forEach((parcela, index) => {
+          addTransacao(parcela)
+          // Log para debug
+          console.log(`Parcela ${index + 1}/${totalParcelas} criada:`, parcela.descricao)
+        })
       }
     } else if (transacaoSelecionada) {
-      updateTransacao(transacaoSelecionada.id, {
-        ...formDataTransacao,
-        status: formDataTransacao.status || transacaoSelecionada.status || 'pendente',
-      })
+      // Obter todas as transações relacionadas (parcelas do mesmo grupo)
+      const transacoesRelacionadas = obterTransacoesRelacionadas(transacaoSelecionada)
+      
+      // Se há transações relacionadas (é um grupo de parcelas), atualizar todas
+      if (transacoesRelacionadas.length > 1) {
+        // Determinar a data inicial baseada na primeira parcela ou na data editada
+        const primeiraParcela = transacoesRelacionadas.sort((a, b) => 
+          (a.parcelaAtual || 1) - (b.parcelaAtual || 1)
+        )[0]
+        
+        // Se estamos editando a primeira parcela, usar a nova data como data inicial
+        // Caso contrário, usar a data da primeira parcela existente
+        const dataInicioAtualizada = transacaoSelecionada.parcelaAtual === 1 
+          ? (formDataTransacao.data || formDataTransacao.dataInicio || primeiraParcela.data)
+          : (primeiraParcela.data)
+        
+        // Campos que devem ser sincronizados em todas as parcelas
+        const camposSincronizados = {
+          descricao: formDataTransacao.descricao || transacaoSelecionada.descricao,
+          valor: formDataTransacao.valor !== undefined ? formDataTransacao.valor : transacaoSelecionada.valor,
+          categoria: formDataTransacao.categoria || transacaoSelecionada.categoria,
+          projetoId: formDataTransacao.projetoId !== undefined ? formDataTransacao.projetoId : transacaoSelecionada.projetoId,
+          clienteId: formDataTransacao.clienteId !== undefined ? formDataTransacao.clienteId : transacaoSelecionada.clienteId,
+          target: formDataTransacao.target !== undefined ? formDataTransacao.target : transacaoSelecionada.target,
+          periodicidade: formDataTransacao.periodicidade || transacaoSelecionada.periodicidade,
+        }
+        
+        // Atualizar cada parcela do grupo
+        transacoesRelacionadas.forEach((transacao) => {
+          // Recalcular a data baseada na periodicidade e número da parcela
+          const periodicidade = camposSincronizados.periodicidade || transacao.periodicidade || 'mensal'
+          const parcelaAtual = transacao.parcelaAtual || 1
+          const dataInicioDate = dataInicioAtualizada instanceof Date 
+            ? dataInicioAtualizada 
+            : new Date(dataInicioAtualizada)
+          const novaData = calcularProximaData(dataInicioDate, periodicidade, parcelaAtual)
+          
+          // Atualizar descrição mantendo o número da parcela
+          const totalParcelas = transacoesRelacionadas.length
+          const descricaoBase = camposSincronizados.descricao || transacao.descricao || ''
+          // Remover o sufixo de parcela se existir (ex: " (2/10)")
+          const descricaoLimpa = descricaoBase.replace(/\s*\(\d+\/\d+\)\s*$/, '').trim()
+          const novaDescricao = totalParcelas > 1 
+            ? `${descricaoLimpa} (${parcelaAtual}/${totalParcelas})`
+            : descricaoLimpa
+          
+          // Atualizar a transação mantendo o status individual de cada parcela
+          updateTransacao(transacao.id, {
+            ...camposSincronizados,
+            descricao: novaDescricao,
+            data: novaData,
+            dataInicio: dataInicioDate,
+            status: transacao.status || 'pendente', // Manter o status individual
+            parcelaAtual: transacao.parcelaAtual, // Manter o número da parcela
+            quantidadeParcelas: totalParcelas, // Atualizar total de parcelas
+            transacaoPaiId: transacao.transacaoPaiId || transacaoSelecionada.transacaoPaiId, // Manter o ID do pai
+          })
+        })
+      } else {
+        // Se não há transações relacionadas, atualizar apenas a transação selecionada
+        updateTransacao(transacaoSelecionada.id, {
+          ...formDataTransacao,
+          status: formDataTransacao.status || transacaoSelecionada.status || 'pendente',
+        })
+      }
     }
 
     handleFecharModalTransacao()
@@ -619,33 +796,80 @@ export default function FincorePage() {
         </div>
 
         {/* Métricas Principais */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-          <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-6 border border-green-500/30 shadow-xl">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 max-w-7xl mx-auto">
+          {/* Botão de Ocultar/Mostrar Valores */}
+          <div className="lg:col-span-5 flex justify-end mb-2">
+            <button
+              onClick={() => setValoresVisiveis(!valoresVisiveis)}
+              className="px-4 py-2 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 text-slate-300 rounded-lg transition-all text-sm font-medium flex items-center gap-2"
+              title={valoresVisiveis ? 'Ocultar valores' : 'Mostrar valores'}
+            >
+              {valoresVisiveis ? (
+                <>
+                  <EyeOff className="text-slate-300" size={18} />
+                  Ocultar Valores
+                </>
+              ) : (
+                <>
+                  <Eye className="text-slate-300" size={18} />
+                  Mostrar Valores
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Receitas Pessoais */}
+          <div className="bg-gradient-to-br from-blue-500/20 via-blue-600/20 to-blue-700/20 backdrop-blur-sm rounded-2xl p-6 border-2 border-blue-500/30 shadow-xl">
             <div className="flex items-start justify-between mb-4">
-              <div className="p-3 bg-green-500/10 rounded-xl border border-green-500/20">
-                <TrendingUp className="text-green-400" size={24} />
+              <div className="p-3 bg-blue-500/30 rounded-xl border border-blue-500/50">
+                <User className="text-blue-300" size={24} />
               </div>
-              <button
-                onClick={() => setValoresVisiveis(!valoresVisiveis)}
-                className="p-1.5 hover:bg-slate-700/50 rounded-lg transition-colors"
-                title={valoresVisiveis ? 'Ocultar valores' : 'Mostrar valores'}
-              >
-                {valoresVisiveis ? (
-                  <Eye className="text-slate-400 hover:text-slate-300" size={18} />
-                ) : (
-                  <EyeOff className="text-slate-400 hover:text-slate-300" size={18} />
-                )}
-              </button>
             </div>
             <div className="space-y-1">
-              <div className="text-slate-400 text-sm font-medium">Total Receitas</div>
-              <div className="text-3xl font-bold text-green-400">
+              <div className="text-blue-200 text-sm font-medium uppercase tracking-wide">Receitas Pessoais</div>
+              <div className="text-3xl font-bold text-white">
+                {valoresVisiveis ? formatCurrency(totalReceitasPessoaisMesAtual) : '••••••'}
+              </div>
+              <div className="text-blue-300 text-xs mt-2">
+                {receitasPessoaisMesAtual.length} transação(ões)
+              </div>
+            </div>
+          </div>
+
+          {/* Receitas Empresa */}
+          <div className="bg-gradient-to-br from-purple-500/20 via-purple-600/20 to-purple-700/20 backdrop-blur-sm rounded-2xl p-6 border-2 border-purple-500/30 shadow-xl">
+            <div className="flex items-start justify-between mb-4">
+              <div className="p-3 bg-purple-500/30 rounded-xl border border-purple-500/50">
+                <Briefcase className="text-purple-300" size={24} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-purple-200 text-sm font-medium uppercase tracking-wide">Receitas Empresa</div>
+              <div className="text-3xl font-bold text-white">
+                {valoresVisiveis ? formatCurrency(totalReceitasEmpresaMesAtual) : '••••••'}
+              </div>
+              <div className="text-purple-300 text-xs mt-2">
+                {receitasEmpresaMesAtual.length} transação(ões)
+              </div>
+            </div>
+          </div>
+
+          {/* Total Receitas */}
+          <div className="bg-gradient-to-br from-green-500/20 via-green-600/20 to-green-700/20 backdrop-blur-sm rounded-2xl p-6 border-2 border-green-500/30 shadow-xl">
+            <div className="flex items-start justify-between mb-4">
+              <div className="p-3 bg-green-500/30 rounded-xl border border-green-500/50">
+                <TrendingUp className="text-green-300" size={24} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-green-200 text-sm font-medium uppercase tracking-wide">Total Receitas</div>
+              <div className="text-3xl font-bold text-white">
                 {valoresVisiveis ? formatCurrency(totalReceitasMesAtual) : '••••••'}
               </div>
-              <div className="flex items-center gap-2 text-sm">
-                <TrendingUp className="text-green-400" size={14} />
-                <span className="text-green-400 font-medium">{formatPercent(crescimentoReceita)}</span>
-                <span className="text-slate-500">vs período anterior</span>
+              <div className="flex items-center gap-2 text-sm mt-2">
+                <TrendingUp className="text-green-300" size={14} />
+                <span className="text-green-300 font-medium">{formatPercent(crescimentoReceita)}</span>
+                <span className="text-slate-400 text-xs">vs período anterior</span>
               </div>
             </div>
           </div>
@@ -739,15 +963,15 @@ export default function FincorePage() {
               Despesas
             </button>
             <button
-              onClick={() => setAbaAtiva('fluxo-caixa')}
+              onClick={() => setAbaAtiva('reserva-emergencia')}
               className={`px-6 py-3 rounded-xl transition-all font-medium flex items-center gap-2 ${
-                abaAtiva === 'fluxo-caixa'
+                abaAtiva === 'reserva-emergencia'
                   ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/20'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <ArrowLeftRight size={20} />
-              Fluxo de Caixa
+              <Shield size={20} />
+              Reserva de Emergência
             </button>
           </div>
         </div>
@@ -1162,14 +1386,14 @@ export default function FincorePage() {
 
             {/* Cards de Resumo */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              <div className="bg-white rounded-xl p-5 border-2 border-green-500/30 shadow-lg">
+              <div className="bg-white rounded-xl p-5 border-2 border-green-500 shadow-lg">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-green-500/10 rounded-lg">
-                    <LineChart className="text-green-600" size={20} />
+                  <div className="p-2 bg-green-500/10 rounded-lg border-2 border-green-300">
+                    <LineChart className="text-green-700" size={20} />
                   </div>
-                  <div className="text-xs text-slate-600 font-semibold">TOTAL DE RECEITAS DO MÊS</div>
+                  <div className="text-xs text-slate-900 font-bold">TOTAL DE RECEITAS DO MÊS</div>
                 </div>
-                <div className="text-2xl font-bold text-slate-800">
+                <div className="text-2xl font-black text-slate-900">
                   {valoresVisiveis ? formatCurrency(totalReceitasMesAtual) : '••••••'}
                 </div>
               </div>
@@ -1188,14 +1412,14 @@ export default function FincorePage() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl p-4 sm:p-5 border-2 border-green-500/30 shadow-lg">
+              <div className="bg-white rounded-xl p-4 sm:p-5 border-2 border-green-500 shadow-lg">
                 <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-                  <div className="p-1.5 sm:p-2 bg-green-500/10 rounded-lg">
-                    <CheckCircle2 className="text-green-600" size={18} />
+                  <div className="p-1.5 sm:p-2 bg-green-500/10 rounded-lg border-2 border-green-300">
+                    <CheckCircle2 className="text-green-700" size={18} />
                   </div>
-                  <div className="text-xs text-slate-600 font-semibold">RECEBIDAS DO MÊS</div>
+                  <div className="text-xs text-slate-900 font-bold">RECEBIDAS DO MÊS</div>
                 </div>
-                <div className="text-2xl font-bold text-slate-800">
+                <div className="text-2xl font-black text-slate-900">
                   {valoresVisiveis ? formatCurrency(
                     receitasMesAtual
                       .filter(r => r.status === 'recebido')
@@ -1204,14 +1428,14 @@ export default function FincorePage() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl p-5 border-2 border-orange-500/30 shadow-lg">
+              <div className="bg-white rounded-xl p-5 border-2 border-orange-500 shadow-lg">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-orange-500/10 rounded-lg">
-                    <Clock className="text-orange-600" size={20} />
+                  <div className="p-2 bg-orange-500/10 rounded-lg border-2 border-orange-300">
+                    <Clock className="text-orange-700" size={20} />
                   </div>
-                  <div className="text-xs text-slate-600 font-semibold">PENDENTES</div>
+                  <div className="text-xs text-slate-900 font-bold">PENDENTES</div>
                 </div>
-                <div className="text-2xl font-bold text-slate-800">
+                <div className="text-2xl font-black text-slate-900">
                   {valoresVisiveis ? formatCurrency(
                     receitasMesAtual
                       .filter(r => r.status === 'pendente' || !r.status)
@@ -1220,14 +1444,14 @@ export default function FincorePage() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl p-5 border-2 border-blue-500/30 shadow-lg">
+              <div className="bg-white rounded-xl p-5 border-2 border-blue-500 shadow-lg">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <FileText className="text-blue-600" size={20} />
+                  <div className="p-2 bg-blue-500/10 rounded-lg border-2 border-blue-300">
+                    <FileText className="text-blue-700" size={20} />
                   </div>
-                  <div className="text-xs text-slate-600 font-semibold">BAIXADOS</div>
+                  <div className="text-xs text-slate-900 font-bold">BAIXADOS</div>
                 </div>
-                <div className="text-2xl font-bold text-slate-800">
+                <div className="text-2xl font-black text-slate-900">
                   {valoresVisiveis ? formatCurrency(
                     receitasMesAtual
                       .filter(r => r.status === 'recebido')
@@ -1248,16 +1472,16 @@ export default function FincorePage() {
                   <div className="flex-1 sm:flex-initial sm:w-48">
                     <DatePicker
                       label="Data Inicial"
-                      value={filtroDataInicio}
-                      onChange={(date) => setFiltroDataInicio(date)}
+                      value={filtroDataInicio || undefined}
+                      onChange={(date) => setFiltroDataInicio(date || null)}
                       placeholder="dd/mm/aaaa"
                     />
                   </div>
                   <div className="flex-1 sm:flex-initial sm:w-48">
                     <DatePicker
                       label="Data Final"
-                      value={filtroDataFim}
-                      onChange={(date) => setFiltroDataFim(date)}
+                      value={filtroDataFim || undefined}
+                      onChange={(date) => setFiltroDataFim(date || null)}
                       placeholder="dd/mm/aaaa"
                     />
                   </div>
@@ -1285,6 +1509,64 @@ export default function FincorePage() {
                 <strong>Nota:</strong> Os cards acima sempre mostram os valores do mês atual. O filtro abaixo afeta apenas a tabela.
               </div>
             </div>
+
+            {/* Cards de Totais do Período Filtrado */}
+            {(filtroDataInicio || filtroDataFim) && (
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-200 shadow-lg">
+                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <Calendar className="text-blue-600" size={20} />
+                  Totais do Período Filtrado
+                  {filtroDataInicio && filtroDataFim && (
+                    <span className="text-sm font-normal text-slate-600">
+                      ({format(filtroDataInicio, 'dd/MM/yyyy')} até {format(filtroDataFim, 'dd/MM/yyyy')})
+                    </span>
+                  )}
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="bg-white rounded-xl p-4 border-2 border-green-300 shadow-md">
+                    <div className="text-xs text-slate-600 font-semibold mb-2">TOTAL DE RECEITAS</div>
+                    <div className="text-2xl font-bold text-green-700">
+                      {valoresVisiveis ? formatCurrency(totalReceitasPeriodo) : '••••••'}
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 border-2 border-red-300 shadow-md">
+                    <div className="text-xs text-slate-600 font-semibold mb-2">TOTAL DE DESPESAS</div>
+                    <div className="text-2xl font-bold text-red-700">
+                      {valoresVisiveis ? formatCurrency(totalDespesasPeriodo) : '••••••'}
+                    </div>
+                  </div>
+                  <div className={`bg-white rounded-xl p-4 border-2 shadow-md ${
+                    saldoPeriodo >= 0 ? 'border-green-300' : 'border-red-300'
+                  }`}>
+                    <div className="text-xs text-slate-600 font-semibold mb-2">SALDO DO PERÍODO</div>
+                    <div className={`text-2xl font-bold ${
+                      saldoPeriodo >= 0 ? 'text-green-700' : 'text-red-700'
+                    }`}>
+                      {valoresVisiveis ? formatCurrency(saldoPeriodo) : '••••••'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Card de Soma das Parcelas Selecionadas */}
+            {transacoesSelecionadas.size > 0 && receitasFiltradasAgrupadas.some(r => isTransacaoSelecionada(r)) && (
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border-2 border-green-300 shadow-lg">
+                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <Target className="text-green-600" size={20} />
+                  Soma das Parcelas Selecionadas
+                  <span className="text-sm font-normal text-slate-600">
+                    ({transacoesSelecionadas.size} {transacoesSelecionadas.size === 1 ? 'item selecionado' : 'itens selecionados'})
+                  </span>
+                </h3>
+                <div className="bg-white rounded-xl p-5 border-2 border-green-400 shadow-md">
+                  <div className="text-xs text-slate-600 font-semibold mb-2">VALOR TOTAL SELECIONADO</div>
+                  <div className="text-3xl font-bold text-green-700">
+                    {valoresVisiveis ? formatCurrency(somaParcelasSelecionadas) : '••••••'}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Tabela de Receitas */}
             {receitasFiltradasAgrupadas.length === 0 ? (
@@ -1333,43 +1615,46 @@ export default function FincorePage() {
                 )}
 
                 {/* Cabeçalho da Tabela - Desktop */}
-                <div className="hidden md:block bg-gradient-to-r from-green-50 to-emerald-50 border-b-2 border-green-200 px-4 sm:px-6 py-4">
-                  <div className="grid grid-cols-8 gap-2 sm:gap-4 items-center text-xs sm:text-sm font-bold text-slate-700">
-                    <div className="flex items-center">
+                <div className="hidden md:block bg-gradient-to-r from-green-50 to-emerald-50 border-b-2 border-green-300 px-6 py-5">
+                  <div className="grid grid-cols-9 gap-6 items-center text-sm font-bold text-slate-900">
+                    <div className="flex items-center justify-center">
                       <input
                         type="checkbox"
                         checked={receitasFiltradasAgrupadas.length > 0 && receitasFiltradasAgrupadas.every(r => isTransacaoSelecionada(r))}
                         onChange={() => handleSelecionarTodas('receita')}
-                        className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 focus:ring-2 cursor-pointer"
+                        className="w-5 h-5 text-green-600 bg-white border-2 border-slate-300 rounded focus:ring-green-500 focus:ring-2 cursor-pointer"
                       />
                     </div>
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <Calendar size={14} className="sm:w-4 sm:h-4 text-green-600" />
+                    <div className="flex items-center gap-2 justify-center">
+                      <Calendar size={18} className="text-green-600" />
                       <span>Data</span>
                   </div>
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <FileText size={14} className="sm:w-4 sm:h-4 text-green-600" />
+                    <div className="flex items-center gap-2 justify-center">
+                      <FileText size={18} className="text-green-600" />
                       <span>Descrição</span>
                 </div>
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <Tag size={14} className="sm:w-4 sm:h-4 text-green-600" />
-                      <span>Grupo</span>
+                    <div className="flex items-center gap-2 justify-center">
+                      <Tag size={18} className="text-green-600" />
+                      <span>Categoria</span>
                           </div>
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <Clock size={14} className="sm:w-4 sm:h-4 text-green-600" />
-                      <span className="hidden lg:inline">Periodicidade</span>
-                      <span className="lg:hidden">Per.</span>
+                    <div className="flex items-center gap-2 justify-center">
+                      <Target size={18} className="text-green-600" />
+                      <span>Target</span>
                     </div>
-                    <div className="flex items-center gap-1 sm:gap-2 justify-end">
-                      <DollarSign size={14} className="sm:w-4 sm:h-4 text-green-600" />
-                      <span>R$ Valor</span>
+                    <div className="flex items-center gap-2 justify-center">
+                      <Clock size={18} className="text-green-600" />
+                      <span>Periodicidade</span>
                     </div>
-                    <div className="flex items-center gap-1 sm:gap-2 justify-center">
-                      <CheckCircle2 size={14} className="sm:w-4 sm:h-4 text-green-600" />
+                    <div className="flex items-center gap-2 justify-center">
+                      <DollarSign size={18} className="text-green-600" />
+                      <span>Valor</span>
+                    </div>
+                    <div className="flex items-center gap-2 justify-center">
+                      <CheckCircle2 size={18} className="text-green-600" />
                       <span>Status</span>
                     </div>
-                    <div className="flex items-center gap-1 sm:gap-2 justify-center">
-                      <Edit size={14} className="sm:w-4 sm:h-4 text-green-600" />
+                    <div className="flex items-center gap-2 justify-center">
+                      <Edit size={18} className="text-green-600" />
                       <span>Ações</span>
                     </div>
                   </div>
@@ -1396,83 +1681,93 @@ export default function FincorePage() {
                       return (
                         <div 
                           key={transacao.id} 
-                          className={`grid grid-cols-8 gap-4 px-6 py-4 items-center hover:bg-green-50/50 transition-colors ${
-                            index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'
-                          } ${transacoesSelecionadas.has(transacao.id) ? 'bg-green-100/50' : ''}`}
+                          className={`grid grid-cols-9 gap-6 px-6 py-5 items-center hover:bg-green-50/70 transition-all duration-200 border-b-2 border-slate-300 ${
+                            index % 2 === 0 ? 'bg-white border-l-4 border-l-slate-300' : 'bg-slate-50/50 border-l-4 border-l-slate-400'
+                          } ${transacoesSelecionadas.has(transacao.id) ? 'bg-green-100/70 border-green-400 border-l-4 border-l-green-600' : ''}`}
                         >
-                            <div className="flex items-center">
+                            <div className="flex items-center justify-center">
                               <input
                                 type="checkbox"
                                 checked={isTransacaoSelecionada(transacao)}
                                 onChange={() => handleToggleSelecao(transacao.id)}
-                                className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 focus:ring-2 cursor-pointer"
+                                className="w-5 h-5 text-green-600 bg-white border-2 border-slate-300 rounded focus:ring-green-500 focus:ring-2 cursor-pointer"
                               />
                             </div>
-                          <div className="flex items-center gap-2 text-slate-700 font-medium">
-                            <Calendar size={14} className="text-slate-400" />
+                          <div className="flex items-center justify-center gap-2 text-slate-900 font-bold text-sm border-r-2 border-slate-300 pr-4">
+                            <Calendar size={14} className="text-slate-700" />
                                 {format(new Date(transacao.data), "dd/MM/yyyy")}
                           </div>
                           
-                          <div className="text-slate-800 font-semibold">
+                          <div className="text-slate-900 font-bold text-sm text-center break-words whitespace-normal border-r-2 border-slate-300 pr-4">
                             {transacao.descricao}
                           </div>
                           
-                          <div>
-                            <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold">
+                          <div className="flex justify-center border-r-2 border-slate-300 pr-4">
+                            <span className="px-3 py-1.5 bg-slate-200 text-slate-900 rounded-lg text-xs font-bold text-center border-2 border-slate-400">
                               {transacao.categoria}
                               </span>
                           </div>
                           
-                          <div className="flex items-center gap-2">
-                            <span className="text-slate-700 font-medium">{periodicidadeLabel}</span>
+                          <div className="flex justify-center border-r-2 border-slate-300 pr-4">
+                            <span className={`inline-block px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shadow-lg transition-all duration-300 hover:scale-110 ${
+                              transacao.target === 'empresa' 
+                                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-2 border-purple-400 shadow-purple-500/50 hover:shadow-purple-500/70' 
+                                : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-2 border-blue-400 shadow-blue-500/50 hover:shadow-blue-500/70'
+                            }`}>
+                              {transacao.target === 'empresa' ? 'EMPRESA' : 'PESSOAL'}
+                            </span>
+                          </div>
+                          
+                          <div className="flex flex-col gap-1.5 items-center justify-center border-r-2 border-slate-300 pr-4">
+                            <span className="text-slate-900 font-bold text-sm text-center">{periodicidadeLabel}</span>
                             {parcelaInfo && (
-                              <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
+                              <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-bold whitespace-nowrap text-center border-2 ${
                                 transacao.parcelaAtual === transacao.quantidadeParcelas
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'bg-blue-100 text-blue-700'
+                                  ? 'bg-green-200 text-green-900 border-green-400'
+                                  : 'bg-orange-200 text-orange-900 border-orange-400'
                               }`}>
                                 {parcelaInfo}
                                 </span>
                               )}
                             </div>
                           
-                          <div className="text-slate-800 font-bold text-lg">
+                          <div className="text-slate-900 font-black text-lg text-center border-r-2 border-slate-300 pr-4">
                             {valoresVisiveis ? formatCurrency(transacao.valor) : '••••••'}
                           </div>
                           
-                          <div>
-                            <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${
+                          <div className="flex justify-center border-r-2 border-slate-300 pr-4">
+                            <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border-2 ${
                               status === 'recebido' 
-                                ? 'bg-green-100 text-green-700'
+                                ? 'bg-green-200 text-green-900 border-green-500'
                                 : status === 'cancelado'
-                                ? 'bg-red-100 text-red-700'
-                                : 'bg-yellow-100 text-yellow-700'
+                                ? 'bg-red-200 text-red-900 border-red-500'
+                                : 'bg-yellow-200 text-yellow-900 border-yellow-500'
                             }`}>
                               {status === 'recebido' ? 'RECEBIDO' : status === 'cancelado' ? 'CANCELADO' : 'PENDENTE'}
                             </span>
                           </div>
                           
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 justify-center">
                             <button
                               onClick={() => {
                                 const novoStatus = status === 'recebido' ? 'pendente' : 'recebido'
                                 updateTransacao(transacao.id, { status: novoStatus })
                               }}
-                              className={`p-2 rounded-lg transition-all ${
+                              className={`p-2.5 rounded-lg transition-all hover:scale-110 ${
                                 status === 'recebido'
-                                  ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                  ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200'
+                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
                               }`}
                               title={status === 'recebido' ? 'Marcar como Pendente' : 'Marcar como Recebido'}
                             >
-                              <CheckCircle2 size={16} />
+                              <CheckCircle2 size={18} />
                             </button>
                             <button
                               onClick={() => handleEditarTransacao(transacao)}
-                              className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                              className="p-2.5 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-all hover:scale-110 border border-blue-200"
                               title="Editar"
                             >
-                              <Edit size={16} />
+                              <Edit size={18} />
                             </button>
                             <button
                               onClick={() => {
@@ -1480,10 +1775,10 @@ export default function FincorePage() {
                                   deleteTransacao(transacao.id)
                                 }
                               }}
-                              className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                              className="p-2.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-all hover:scale-110 border border-red-200"
                               title="Excluir"
                             >
-                              <Trash2 size={16} />
+                              <Trash2 size={18} />
                             </button>
                           </div>
                         </div>
@@ -1526,14 +1821,14 @@ export default function FincorePage() {
 
             {/* Cards de Resumo */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              <div className="bg-white rounded-xl p-5 border-2 border-red-500/30 shadow-lg">
+              <div className="bg-white rounded-xl p-5 border-2 border-red-500 shadow-lg">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-red-500/10 rounded-lg">
-                    <LineChart className="text-red-600" size={20} />
+                  <div className="p-2 bg-red-500/10 rounded-lg border-2 border-red-300">
+                    <LineChart className="text-red-700" size={20} />
                   </div>
-                  <div className="text-xs text-slate-600 font-semibold">TOTAL DE DESPESAS DO MÊS</div>
+                  <div className="text-xs text-slate-900 font-bold">TOTAL DE DESPESAS DO MÊS</div>
                 </div>
-                <div className="text-2xl font-bold text-slate-800">
+                <div className="text-2xl font-black text-slate-900">
                   {valoresVisiveis ? formatCurrency(totalDespesasMesAtual) : '••••••'}
                 </div>
               </div>
@@ -1552,14 +1847,14 @@ export default function FincorePage() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl p-5 border-2 border-red-500/30 shadow-lg">
+              <div className="bg-white rounded-xl p-5 border-2 border-red-500 shadow-lg">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-red-500/10 rounded-lg">
-                    <Clock className="text-red-600" size={20} />
+                  <div className="p-2 bg-red-500/10 rounded-lg border-2 border-red-300">
+                    <Clock className="text-red-700" size={20} />
                   </div>
-                  <div className="text-xs text-slate-600 font-semibold">PAGAS DO MÊS</div>
+                  <div className="text-xs text-slate-900 font-bold">PAGAS DO MÊS</div>
                 </div>
-                <div className="text-2xl font-bold text-slate-800">
+                <div className="text-2xl font-black text-slate-900">
                   {valoresVisiveis ? formatCurrency(
                     despesasMesAtual
                       .filter(d => d.status === 'pago')
@@ -1568,14 +1863,14 @@ export default function FincorePage() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl p-5 border-2 border-orange-500/30 shadow-lg">
+              <div className="bg-white rounded-xl p-5 border-2 border-orange-500 shadow-lg">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-orange-500/10 rounded-lg">
-                    <Clock className="text-orange-600" size={20} />
+                  <div className="p-2 bg-orange-500/10 rounded-lg border-2 border-orange-300">
+                    <Clock className="text-orange-700" size={20} />
                   </div>
-                  <div className="text-xs text-slate-600 font-semibold">PENDENTES</div>
+                  <div className="text-xs text-slate-900 font-bold">PENDENTES</div>
                 </div>
-                <div className="text-2xl font-bold text-slate-800">
+                <div className="text-2xl font-black text-slate-900">
                   {valoresVisiveis ? formatCurrency(
                     despesasMesAtual
                       .filter(d => d.status === 'pendente' || !d.status)
@@ -1584,14 +1879,14 @@ export default function FincorePage() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl p-5 border-2 border-blue-500/30 shadow-lg">
+              <div className="bg-white rounded-xl p-5 border-2 border-blue-500 shadow-lg">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <FileText className="text-blue-600" size={20} />
+                  <div className="p-2 bg-blue-500/10 rounded-lg border-2 border-blue-300">
+                    <FileText className="text-blue-700" size={20} />
                   </div>
-                  <div className="text-xs text-slate-600 font-semibold">BAIXADOS</div>
+                  <div className="text-xs text-slate-900 font-bold">BAIXADOS</div>
                 </div>
-                <div className="text-2xl font-bold text-slate-800">
+                <div className="text-2xl font-black text-slate-900">
                   {valoresVisiveis ? formatCurrency(
                     despesasMesAtual
                       .filter(d => d.status === 'pago')
@@ -1612,16 +1907,16 @@ export default function FincorePage() {
                   <div className="flex-1 sm:flex-initial sm:w-48">
                     <DatePicker
                       label="Data Inicial"
-                      value={filtroDataInicio}
-                      onChange={(date) => setFiltroDataInicio(date)}
+                      value={filtroDataInicio || undefined}
+                      onChange={(date) => setFiltroDataInicio(date || null)}
                       placeholder="dd/mm/aaaa"
                     />
                   </div>
                   <div className="flex-1 sm:flex-initial sm:w-48">
                     <DatePicker
                       label="Data Final"
-                      value={filtroDataFim}
-                      onChange={(date) => setFiltroDataFim(date)}
+                      value={filtroDataFim || undefined}
+                      onChange={(date) => setFiltroDataFim(date || null)}
                       placeholder="dd/mm/aaaa"
                     />
                   </div>
@@ -1649,6 +1944,64 @@ export default function FincorePage() {
                 <strong>Nota:</strong> Os cards acima sempre mostram os valores do mês atual. O filtro abaixo afeta apenas a tabela.
               </div>
             </div>
+
+            {/* Cards de Totais do Período Filtrado */}
+            {(filtroDataInicio || filtroDataFim) && (
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-200 shadow-lg">
+                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <Calendar className="text-blue-600" size={20} />
+                  Totais do Período Filtrado
+                  {filtroDataInicio && filtroDataFim && (
+                    <span className="text-sm font-normal text-slate-600">
+                      ({format(filtroDataInicio, 'dd/MM/yyyy')} até {format(filtroDataFim, 'dd/MM/yyyy')})
+                    </span>
+                  )}
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="bg-white rounded-xl p-4 border-2 border-green-300 shadow-md">
+                    <div className="text-xs text-slate-600 font-semibold mb-2">TOTAL DE RECEITAS</div>
+                    <div className="text-2xl font-bold text-green-700">
+                      {valoresVisiveis ? formatCurrency(totalReceitasPeriodo) : '••••••'}
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 border-2 border-red-300 shadow-md">
+                    <div className="text-xs text-slate-600 font-semibold mb-2">TOTAL DE DESPESAS</div>
+                    <div className="text-2xl font-bold text-red-700">
+                      {valoresVisiveis ? formatCurrency(totalDespesasPeriodo) : '••••••'}
+                    </div>
+                  </div>
+                  <div className={`bg-white rounded-xl p-4 border-2 shadow-md ${
+                    saldoPeriodo >= 0 ? 'border-green-300' : 'border-red-300'
+                  }`}>
+                    <div className="text-xs text-slate-600 font-semibold mb-2">SALDO DO PERÍODO</div>
+                    <div className={`text-2xl font-bold ${
+                      saldoPeriodo >= 0 ? 'text-green-700' : 'text-red-700'
+                    }`}>
+                      {valoresVisiveis ? formatCurrency(saldoPeriodo) : '••••••'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Card de Soma das Parcelas Selecionadas */}
+            {transacoesSelecionadas.size > 0 && despesasFiltradasAgrupadas.some(d => isTransacaoSelecionada(d)) && (
+              <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-xl p-6 border-2 border-red-300 shadow-lg">
+                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <Target className="text-red-600" size={20} />
+                  Soma das Parcelas Selecionadas
+                  <span className="text-sm font-normal text-slate-600">
+                    ({transacoesSelecionadas.size} {transacoesSelecionadas.size === 1 ? 'item selecionado' : 'itens selecionados'})
+                  </span>
+                </h3>
+                <div className="bg-white rounded-xl p-5 border-2 border-red-400 shadow-md">
+                  <div className="text-xs text-slate-600 font-semibold mb-2">VALOR TOTAL SELECIONADO</div>
+                  <div className="text-3xl font-bold text-red-700">
+                    {valoresVisiveis ? formatCurrency(somaParcelasSelecionadas) : '••••••'}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Tabela de Despesas */}
             {despesasFiltradasAgrupadas.length === 0 ? (
@@ -1696,43 +2049,46 @@ export default function FincorePage() {
                 )}
 
                 {/* Cabeçalho da Tabela - Desktop */}
-                <div className="hidden md:block bg-gradient-to-r from-red-50 to-rose-50 border-b-2 border-red-200 px-4 sm:px-6 py-4">
-                  <div className="grid grid-cols-8 gap-2 sm:gap-4 items-center text-xs sm:text-sm font-bold text-slate-700">
-                    <div className="flex items-center">
+                <div className="hidden md:block bg-gradient-to-r from-red-50 to-rose-50 border-b-2 border-red-300 px-6 py-5">
+                  <div className="grid grid-cols-9 gap-6 items-center text-sm font-bold text-slate-900">
+                    <div className="flex items-center justify-center">
                       <input
                         type="checkbox"
                         checked={despesasFiltradasAgrupadas.length > 0 && despesasFiltradasAgrupadas.every(d => isTransacaoSelecionada(d))}
                         onChange={() => handleSelecionarTodas('despesa')}
-                        className="w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2 cursor-pointer"
+                        className="w-5 h-5 text-red-600 bg-white border-2 border-slate-300 rounded focus:ring-red-500 focus:ring-2 cursor-pointer"
                       />
                     </div>
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <Calendar size={14} className="sm:w-4 sm:h-4 text-red-600" />
+                    <div className="flex items-center gap-2">
+                      <Calendar size={18} className="text-red-600" />
                       <span>Data</span>
                   </div>
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <FileText size={14} className="sm:w-4 sm:h-4 text-red-600" />
+                    <div className="flex items-center gap-2">
+                      <FileText size={18} className="text-red-600" />
                       <span>Descrição</span>
                 </div>
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <Tag size={14} className="sm:w-4 sm:h-4 text-red-600" />
-                      <span>Grupo</span>
+                    <div className="flex items-center gap-2">
+                      <Tag size={18} className="text-red-600" />
+                      <span>Categoria</span>
                           </div>
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <Clock size={14} className="sm:w-4 sm:h-4 text-red-600" />
-                      <span className="hidden lg:inline">Periodicidade</span>
-                      <span className="lg:hidden">Per.</span>
+                    <div className="flex items-center gap-2">
+                      <Target size={18} className="text-red-600" />
+                      <span>Target</span>
                     </div>
-                    <div className="flex items-center gap-1 sm:gap-2 justify-end">
-                      <DollarSign size={14} className="sm:w-4 sm:h-4 text-red-600" />
-                      <span>R$ Valor</span>
+                    <div className="flex items-center gap-2">
+                      <Clock size={18} className="text-red-600" />
+                      <span>Periodicidade</span>
                     </div>
-                    <div className="flex items-center gap-1 sm:gap-2 justify-center">
-                      <CheckCircle2 size={14} className="sm:w-4 sm:h-4 text-red-600" />
+                    <div className="flex items-center gap-2 justify-end">
+                      <DollarSign size={18} className="text-red-600" />
+                      <span>Valor</span>
+                    </div>
+                    <div className="flex items-center gap-2 justify-center">
+                      <CheckCircle2 size={18} className="text-red-600" />
                       <span>Status</span>
                     </div>
-                    <div className="flex items-center gap-1 sm:gap-2 justify-center">
-                      <Edit size={14} className="sm:w-4 sm:h-4 text-red-600" />
+                    <div className="flex items-center gap-2 justify-center">
+                      <Edit size={18} className="text-red-600" />
                       <span>Ações</span>
                     </div>
                   </div>
@@ -1763,83 +2119,95 @@ export default function FincorePage() {
                           {/* Versão Desktop */}
                           <div 
                             key={transacao.id} 
-                            className={`hidden md:grid grid-cols-8 gap-2 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 items-center hover:bg-red-50/50 transition-colors ${
-                              index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'
-                            } ${transacoesSelecionadas.has(transacao.id) ? 'bg-red-100/50' : ''}`}
+                            className={`hidden md:grid grid-cols-9 gap-6 px-6 py-5 items-center hover:bg-red-50/70 transition-all duration-200 border-b-2 border-slate-300 ${
+                              index % 2 === 0 ? 'bg-white border-l-4 border-l-slate-300' : 'bg-slate-50/50 border-l-4 border-l-slate-400'
+                            } ${transacoesSelecionadas.has(transacao.id) ? 'bg-red-100/70 border-red-400 border-l-4 border-l-red-600' : ''}`}
                           >
-                            <div className="flex items-center">
+                            <div className="flex items-center justify-center">
                               <input
                                 type="checkbox"
                                 checked={isTransacaoSelecionada(transacao)}
                                 onChange={() => handleToggleSelecao(transacao.id)}
-                                className="w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2 cursor-pointer"
+                                className="w-5 h-5 text-red-600 bg-white border-2 border-slate-300 rounded focus:ring-red-500 focus:ring-2 cursor-pointer"
                               />
                             </div>
-                            <div className="flex items-center gap-1 sm:gap-2 text-slate-700 font-medium text-xs sm:text-sm">
-                              <Calendar size={12} className="sm:w-3.5 sm:h-3.5 text-slate-400" />
-                                {format(new Date(transacao.data), "dd/MM/yyyy")}
+                            <div className="flex items-center justify-center gap-2 text-slate-900 font-bold text-sm border-r-2 border-slate-300 pr-4">
+                              <Calendar size={16} className="text-slate-700" />
+                              <span className="whitespace-nowrap">{format(new Date(transacao.data), "dd/MM/yyyy")}</span>
                             </div>
                             
-                            <div className="text-slate-800 font-semibold text-xs sm:text-sm truncate">
-                              {transacao.descricao}
+                            <div className="text-slate-900 font-bold text-sm text-center break-words border-r-2 border-slate-300 pr-4">
+                              <div className="whitespace-normal">
+                                {transacao.descricao}
+                              </div>
                             </div>
                             
-                            <div>
-                              <span className="px-2 sm:px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold">
+                            <div className="flex justify-center border-r-2 border-slate-300 pr-4">
+                              <span className="inline-block px-3 py-1.5 bg-slate-200 text-slate-900 rounded-lg text-xs font-bold whitespace-nowrap text-center border-2 border-slate-400">
                                 {transacao.categoria}
                               </span>
                             </div>
                             
-                            <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-                              <span className="text-slate-700 font-medium text-xs sm:text-sm">{periodicidadeLabel}</span>
+                            <div className="flex justify-center border-r-2 border-slate-300 pr-4">
+                              <span className={`inline-block px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shadow-lg transition-all duration-300 hover:scale-110 ${
+                                transacao.target === 'empresa' 
+                                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-2 border-purple-400 shadow-purple-500/50 hover:shadow-purple-500/70' 
+                                  : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-2 border-blue-400 shadow-blue-500/50 hover:shadow-blue-500/70'
+                              }`}>
+                                {transacao.target === 'empresa' ? 'EMPRESA' : 'PESSOAL'}
+                              </span>
+                            </div>
+                            
+                            <div className="flex flex-col gap-1.5 items-center justify-center border-r-2 border-slate-300 pr-4">
+                              <span className="text-slate-900 font-bold text-sm whitespace-nowrap text-center">{periodicidadeLabel}</span>
                               {parcelaInfo && (
-                                <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg text-xs font-bold ${
+                                <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-bold whitespace-nowrap text-center border-2 ${
                                   transacao.parcelaAtual === transacao.quantidadeParcelas
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'bg-red-100 text-red-700'
+                                    ? 'bg-green-200 text-green-900 border-green-500'
+                                    : 'bg-orange-200 text-orange-900 border-orange-500'
                                 }`}>
                                   {parcelaInfo}
                                 </span>
                               )}
                             </div>
                             
-                            <div className="text-slate-800 font-bold text-sm sm:text-lg text-right">
-                              {valoresVisiveis ? formatCurrency(infoGrupo.totalParcelas > 1 ? infoGrupo.valorTotal : transacao.valor) : '••••••'}
+                            <div className="text-slate-900 font-black text-lg text-center border-r-2 border-slate-300 pr-4">
+                              {valoresVisiveis ? formatCurrency(transacao.valor) : '••••••'}
                           </div>
                             
-                            <div className="flex justify-center">
-                              <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold ${
+                            <div className="flex justify-center border-r-2 border-slate-300 pr-4">
+                              <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border-2 ${
                                 status === 'pago' 
-                                  ? 'bg-green-100 text-green-700'
+                                  ? 'bg-green-200 text-green-900 border-green-500'
                                   : status === 'cancelado'
-                                  ? 'bg-red-100 text-red-700'
-                                  : 'bg-yellow-100 text-yellow-700'
+                                  ? 'bg-red-200 text-red-900 border-red-500'
+                                  : 'bg-yellow-200 text-yellow-900 border-yellow-500'
                               }`}>
                                 {status === 'pago' ? 'PAGO' : status === 'cancelado' ? 'CANCELADO' : 'PENDENTE'}
                               </span>
                           </div>
                             
-                            <div className="flex items-center gap-1 sm:gap-2 justify-center">
+                            <div className="flex items-center gap-2 justify-center">
                               <button
                                 onClick={() => {
                                   const novoStatus = status === 'pago' ? 'pendente' : 'pago'
                                   updateTransacao(transacao.id, { status: novoStatus })
                                 }}
-                                className={`p-1.5 sm:p-2 rounded-lg transition-all ${
+                                className={`p-2.5 rounded-lg transition-all hover:scale-110 ${
                                   status === 'pago'
-                                    ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                    ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
                                 }`}
                                 title={status === 'pago' ? 'Marcar como Pendente' : 'Marcar como Pago'}
                               >
-                                <CheckCircle2 size={14} className="sm:w-4 sm:h-4" />
+                                <CheckCircle2 size={18} />
                               </button>
                             <button
                               onClick={() => handleEditarTransacao(transacao)}
-                                className="p-1.5 sm:p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                                className="p-2.5 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-all hover:scale-110 border border-blue-200"
                               title="Editar"
                             >
-                                <Edit size={14} className="sm:w-4 sm:h-4" />
+                                <Edit size={18} />
                             </button>
                             <button
                               onClick={() => {
@@ -1847,10 +2215,10 @@ export default function FincorePage() {
                                   deleteTransacao(transacao.id)
                                 }
                               }}
-                                className="p-1.5 sm:p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                              className="p-2.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-all hover:scale-110 border border-red-200"
                               title="Excluir"
                             >
-                                <Trash2 size={14} className="sm:w-4 sm:h-4" />
+                                <Trash2 size={18} />
                             </button>
                           </div>
                         </div>
@@ -1858,8 +2226,8 @@ export default function FincorePage() {
                           {/* Versão Mobile - Card */}
                           <div 
                             key={`${transacao.id}-mobile`}
-                            className={`md:hidden p-4 border-b border-slate-200 ${
-                              transacoesSelecionadas.has(transacao.id) ? 'bg-red-100/50' : 'bg-white'
+                            className={`md:hidden p-4 border-b-2 border-slate-300 ${
+                              transacoesSelecionadas.has(transacao.id) ? 'bg-red-100/50 border-red-400' : 'bg-white'
                             }`}
                           >
                             <div className="flex items-start justify-between mb-3">
@@ -1868,26 +2236,26 @@ export default function FincorePage() {
                                   type="checkbox"
                                   checked={transacoesSelecionadas.has(transacao.id)}
                                   onChange={() => handleToggleSelecao(transacao.id)}
-                                  className="w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2 cursor-pointer mt-1"
+                                  className="w-4 h-4 text-red-600 bg-white border-2 border-slate-400 rounded focus:ring-red-500 focus:ring-2 cursor-pointer mt-1"
                                 />
                                 <div className="flex-1">
-                                  <div className="text-slate-800 font-semibold text-sm mb-1">{transacao.descricao}</div>
-                                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                                  <div className="text-slate-900 font-bold text-sm mb-1">{transacao.descricao}</div>
+                                  <div className="flex items-center gap-2 text-xs text-slate-700 font-semibold">
                                     <Calendar size={12} />
                                     {format(new Date(transacao.data), "dd/MM/yyyy")}
                       </div>
                     </div>
                 </div>
                               <div className="text-right">
-                                <div className="text-slate-800 font-bold text-lg mb-1">
-                                  {valoresVisiveis ? formatCurrency(infoGrupo.totalParcelas > 1 ? infoGrupo.valorTotal : transacao.valor) : '••••••'}
+                                <div className="text-slate-900 font-black text-lg mb-1">
+                                  {valoresVisiveis ? formatCurrency(transacao.valor) : '••••••'}
               </div>
-                                <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
+                                <span className={`px-2 py-1 rounded-lg text-xs font-bold border-2 ${
                                   status === 'pago' 
-                                    ? 'bg-green-100 text-green-700'
+                                    ? 'bg-green-200 text-green-900 border-green-500'
                                     : status === 'cancelado'
-                                    ? 'bg-red-100 text-red-700'
-                                    : 'bg-yellow-100 text-yellow-700'
+                                    ? 'bg-red-200 text-red-900 border-red-500'
+                                    : 'bg-yellow-200 text-yellow-900 border-yellow-500'
                                 }`}>
                                   {status === 'pago' ? 'PAGO' : status === 'cancelado' ? 'CANCELADO' : 'PENDENTE'}
                                 </span>
@@ -1895,15 +2263,24 @@ export default function FincorePage() {
                             </div>
                             
                             <div className="flex flex-wrap items-center gap-2 mb-3">
-                              <span className="px-2 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold">
+                              <span className="px-2 py-1 bg-slate-200 text-slate-900 rounded-lg text-xs font-bold border-2 border-slate-400">
                                 {transacao.categoria}
                               </span>
-                              <span className="text-slate-700 font-medium text-xs">{periodicidadeLabel}</span>
+                              {transacao.target && (
+                                <span className={`inline-block px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shadow-md transition-all duration-300 hover:scale-110 ${
+                                  transacao.target === 'empresa' 
+                                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-2 border-purple-400 shadow-purple-500/50' 
+                                    : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-2 border-blue-400 shadow-blue-500/50'
+                                }`}>
+                                  {transacao.target === 'empresa' ? 'EMPRESA' : 'PESSOAL'}
+                                </span>
+                              )}
+                              <span className="text-slate-900 font-bold text-xs">{periodicidadeLabel}</span>
                               {parcelaInfo && (
-                                <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
+                                <span className={`px-2 py-1 rounded-lg text-xs font-bold border-2 ${
                                   transacao.parcelaAtual === transacao.quantidadeParcelas
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'bg-red-100 text-red-700'
+                                    ? 'bg-green-200 text-green-900 border-green-500'
+                                    : 'bg-orange-200 text-orange-900 border-orange-500'
                                 }`}>
                                   {parcelaInfo}
                                 </span>
@@ -1951,144 +2328,121 @@ export default function FincorePage() {
           </div>
         )}
 
-        {abaAtiva === 'fluxo-caixa' && (
+        {abaAtiva === 'reserva-emergencia' && (
           <div className="max-w-7xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                <ArrowLeftRight className="text-purple-400" size={28} />
-                Fluxo de Caixa
+                <Shield className="text-purple-400" size={28} />
+                Reserva de Emergência
               </h2>
               <button
-                onClick={handleNovoLancamento}
+                onClick={() => {
+                  setPercentualPessoal(reservaEmergencia?.percentualPessoal || 10)
+                  setPercentualEmpresa(reservaEmergencia?.percentualEmpresa || 10)
+                  setMostrarModalConfigReserva(true)
+                }}
                 className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl transition-all font-medium shadow-lg shadow-purple-500/20"
               >
-                <Plus size={20} />
-                Novo Lançamento
+                <Settings size={20} />
+                Configurar
               </button>
             </div>
 
-            {lancamentosFiltrados.length === 0 ? (
-              <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-16 border border-slate-700/50 shadow-xl text-center">
-                <ArrowLeftRight className="mx-auto mb-4 text-slate-600" size={48} />
-                <h3 className="text-xl font-semibold text-white mb-2">Nenhum lançamento encontrado</h3>
-                <p className="text-slate-400 mb-6">Comece adicionando seu primeiro lançamento de fluxo de caixa</p>
-                <button
-                  onClick={handleNovoLancamento}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl transition-all font-medium shadow-lg shadow-purple-500/20"
-                >
-                  <Plus size={20} />
-                  Adicionar Primeiro Lançamento
-                </button>
-              </div>
-            ) : (
-              <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-xl">
-                <div className="p-6 border-b border-slate-700/50">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-bold text-white">Lançamentos de Fluxo de Caixa</h3>
-                    <span className="text-slate-400 text-sm">{lancamentosFiltrados.length} lançamento(s)</span>
+            {/* Cards de Resumo */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Card Reserva Pessoal */}
+              <div className="bg-gradient-to-br from-blue-600/20 to-cyan-600/20 backdrop-blur-sm rounded-2xl p-6 border-2 border-blue-500/30 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-blue-500/20 rounded-xl">
+                      <User className="text-blue-400" size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">Reserva Pessoal</h3>
+                      <p className="text-sm text-slate-400">Percentual: {reservaEmergencia?.percentualPessoal || 10}%</p>
+                    </div>
                   </div>
                 </div>
-                <div className="divide-y divide-slate-700/50">
-                  {lancamentosFiltrados.map((lancamento) => {
-                    const getTipoIcon = () => {
-                      switch (lancamento.tipo) {
-                        case 'entrada':
-                          return <ArrowUpCircle size={24} className="text-green-400" />
-                        case 'saida':
-                          return <ArrowDownCircle size={24} className="text-red-400" />
-                        case 'transferencia':
-                          return <ArrowLeftRight size={24} className="text-blue-400" />
-                        default:
-                          return <DollarSign size={24} className="text-slate-400" />
-                      }
-                    }
-
-                    const getTipoColor = () => {
-                      switch (lancamento.tipo) {
-                        case 'entrada':
-                          return 'bg-green-500/20 border-green-500/30'
-                        case 'saida':
-                          return 'bg-red-500/20 border-red-500/30'
-                        case 'transferencia':
-                          return 'bg-blue-500/20 border-blue-500/30'
-                        default:
-                          return 'bg-slate-500/20 border-slate-500/30'
-                      }
-                    }
-
-                    const getStatusColor = () => {
-                      switch (lancamento.status) {
-                        case 'confirmado':
-                          return 'bg-green-500/20 text-green-400 border-green-500/50'
-                        case 'pendente':
-                          return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50'
-                        case 'cancelado':
-                          return 'bg-red-500/20 text-red-400 border-red-500/50'
-                        default:
-                          return 'bg-slate-500/20 text-slate-400 border-slate-500/50'
-                      }
-                    }
-
-                    return (
-                      <div key={lancamento.id} className="p-5 hover:bg-slate-700/30 transition-colors group">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4 flex-1">
-                            <div className={`p-3 rounded-xl ${getTipoColor()}`}>
-                              {getTipoIcon()}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-white font-semibold text-lg mb-1">{lancamento.descricao}</div>
-                              <div className="flex flex-wrap items-center gap-4 text-sm text-slate-400">
-                                <span className="flex items-center gap-1">
-                                  <Calendar size={14} />
-                                  {format(new Date(lancamento.data), "dd/MM/yyyy")}
-                                </span>
-                                <span className="px-2 py-1 bg-slate-700/50 rounded-lg text-xs">{lancamento.categoria}</span>
-                                <span className="px-2 py-1 bg-slate-700/50 rounded-lg text-xs">{lancamento.metodoPagamento}</span>
-                                <span className={`px-2 py-1 rounded-lg text-xs border ${getStatusColor()}`}>
-                                  {lancamento.status.charAt(0).toUpperCase() + lancamento.status.slice(1)}
-                                </span>
-                              </div>
-                              {lancamento.observacoes && (
-                                <div className="text-slate-400 text-sm mt-2">{lancamento.observacoes}</div>
-                              )}
-                            </div>
-                            <div className={`text-2xl font-bold ${
-                              lancamento.tipo === 'entrada' ? 'text-green-400' : 
-                              lancamento.tipo === 'saida' ? 'text-red-400' : 
-                              'text-blue-400'
-                            }`}>
-                              {lancamento.tipo === 'entrada' ? '+' : lancamento.tipo === 'saida' ? '-' : '↔'}
-                              {valoresVisiveis ? formatCurrency(lancamento.valor) : '••••'}
-                            </div>
-                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={() => handleEditarLancamento(lancamento)}
-                                className="p-2 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 text-white rounded-lg transition-colors"
-                                title="Editar"
-                              >
-                                <Edit size={16} />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (confirm('Tem certeza que deseja excluir este lançamento?')) {
-                                    deleteLancamento(lancamento.id)
-                                  }
-                                }}
-                                className="p-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-red-400 rounded-lg transition-colors"
-                                title="Excluir"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm text-slate-400 mb-1">Total de Receitas Pessoais</p>
+                    <p className="text-2xl font-bold text-white">{valoresVisiveis ? formatCurrency(totalReceitasPessoal) : '••••'}</p>
+                  </div>
+                  <div className="pt-3 border-t border-blue-500/20">
+                    <p className="text-sm text-slate-400 mb-1">Reserva Calculada</p>
+                    <p className="text-3xl font-bold text-blue-400">{valoresVisiveis ? formatCurrency(reservaCalculadaPessoal) : '••••'}</p>
+                  </div>
+                  <div className="pt-3 border-t border-blue-500/20">
+                    <p className="text-sm text-slate-400 mb-1">Valor Total Acumulado</p>
+                    <p className="text-2xl font-bold text-cyan-400">{valoresVisiveis ? formatCurrency(reservaEmergencia?.valorTotalPessoal || 0) : '••••'}</p>
+                  </div>
                 </div>
               </div>
-            )}
+
+              {/* Card Reserva Empresa */}
+              <div className="bg-gradient-to-br from-purple-600/20 to-pink-600/20 backdrop-blur-sm rounded-2xl p-6 border-2 border-purple-500/30 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-purple-500/20 rounded-xl">
+                      <Briefcase className="text-purple-400" size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">Reserva Empresa</h3>
+                      <p className="text-sm text-slate-400">Percentual: {reservaEmergencia?.percentualEmpresa || 10}%</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm text-slate-400 mb-1">Total de Receitas Empresa</p>
+                    <p className="text-2xl font-bold text-white">{valoresVisiveis ? formatCurrency(totalReceitasEmpresa) : '••••'}</p>
+                  </div>
+                  <div className="pt-3 border-t border-purple-500/20">
+                    <p className="text-sm text-slate-400 mb-1">Reserva Calculada</p>
+                    <p className="text-3xl font-bold text-purple-400">{valoresVisiveis ? formatCurrency(reservaCalculadaEmpresa) : '••••'}</p>
+                  </div>
+                  <div className="pt-3 border-t border-purple-500/20">
+                    <p className="text-sm text-slate-400 mb-1">Valor Total Acumulado</p>
+                    <p className="text-2xl font-bold text-pink-400">{valoresVisiveis ? formatCurrency(reservaEmergencia?.valorTotalEmpresa || 0) : '••••'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Card Total Geral */}
+            <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-6 border-2 border-slate-700/50 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-green-500/20 rounded-xl">
+                    <PiggyBank className="text-green-400" size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">Reserva Total</h3>
+                    <p className="text-sm text-slate-400">Soma de todas as reservas</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-slate-400 mb-1">Total Acumulado</p>
+                  <p className="text-3xl font-bold text-green-400">
+                    {valoresVisiveis ? formatCurrency((reservaEmergencia?.valorTotalPessoal || 0) + (reservaEmergencia?.valorTotalEmpresa || 0)) : '••••'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Informações */}
+            <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 shadow-xl">
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <AlertCircle className="text-yellow-400" size={20} />
+                Como Funciona
+              </h3>
+              <div className="space-y-2 text-slate-300 text-sm">
+                <p>• A reserva de emergência é calculada automaticamente com base nas receitas que entram no sistema.</p>
+                <p>• Você pode configurar percentuais diferentes para receitas pessoais e empresariais.</p>
+                <p>• O sistema calcula a reserva baseada no percentual configurado de cada receita recebida.</p>
+                <p>• Os valores são acumulados separadamente para melhor controle financeiro.</p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -2100,20 +2454,34 @@ export default function FincorePage() {
           size="lg"
         >
           <div className="space-y-6">
-            <div>
-              <label className="block text-slate-300 text-sm mb-2.5 font-semibold tracking-wide">Tipo</label>
-              <select
-                value={formDataTransacao.tipo || 'receita'}
-                onChange={(e) => {
-                  const novoTipo = e.target.value as 'receita' | 'despesa'
-                  setFormDataTransacao({ ...formDataTransacao, tipo: novoTipo, categoria: '' })
-                  setBuscaCategoria('')
-                }}
-                className="w-full bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-2 border-slate-600/60 rounded-xl px-4 py-3.5 text-white text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/80 focus:shadow-lg focus:shadow-blue-500/20 transition-all duration-200 hover:border-slate-500/80 cursor-pointer"
-              >
-                <option value="receita" className="bg-slate-800">Receita</option>
-                <option value="despesa" className="bg-slate-800">Despesa</option>
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-slate-300 text-sm mb-2.5 font-semibold tracking-wide">Tipo</label>
+                <select
+                  value={formDataTransacao.tipo || 'receita'}
+                  onChange={(e) => {
+                    const novoTipo = e.target.value as 'receita' | 'despesa'
+                    setFormDataTransacao({ ...formDataTransacao, tipo: novoTipo, categoria: '' })
+                    setBuscaCategoria('')
+                  }}
+                  className="w-full bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-2 border-slate-600/60 rounded-xl px-4 py-3.5 text-white text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/80 focus:shadow-lg focus:shadow-blue-500/20 transition-all duration-200 hover:border-slate-500/80 cursor-pointer"
+                >
+                  <option value="receita" className="bg-slate-800">Receita</option>
+                  <option value="despesa" className="bg-slate-800">Despesa</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 text-sm mb-2.5 font-semibold tracking-wide">Target</label>
+                <select
+                  value={formDataTransacao.target || 'pessoal'}
+                  onChange={(e) => setFormDataTransacao({ ...formDataTransacao, target: e.target.value as 'pessoal' | 'empresa' })}
+                  className="w-full bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-2 border-slate-600/60 rounded-xl px-4 py-3.5 text-white text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/80 focus:shadow-lg focus:shadow-blue-500/20 transition-all duration-200 hover:border-slate-500/80 cursor-pointer"
+                >
+                  <option value="pessoal" className="bg-slate-800">Pessoal</option>
+                  <option value="empresa" className="bg-slate-800">Empresa</option>
+                </select>
+              </div>
             </div>
 
             <div>
@@ -2177,29 +2545,60 @@ export default function FincorePage() {
                 {/* Sugestões de Categorias */}
                 {mostrarSugestoesCategoria && (
                   <div className="absolute z-50 w-full mt-2 bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-slate-700/80 rounded-xl shadow-2xl shadow-black/50 max-h-60 overflow-y-auto backdrop-blur-xl">
-                    {categoriasFiltradas.length > 0 ? (
-                      <>
-                        {categoriasFiltradas.map((categoria) => (
-                          <button
-                            key={categoria.id}
-                            type="button"
-                            onClick={() => {
-                              setFormDataTransacao({ ...formDataTransacao, categoria: categoria.nome })
-                              setBuscaCategoria(categoria.nome)
-                              setMostrarSugestoesCategoria(false)
-                            }}
-                            className="w-full text-left px-4 py-3.5 hover:bg-blue-500/20 transition-all duration-200 flex items-center gap-3 border-b border-slate-700/40 last:border-b-0 group"
-                          >
-                            <Tag className="text-blue-400 group-hover:text-blue-300 transition-colors" size={18} />
-                            <div className="flex-1">
-                              <div className="text-white font-semibold group-hover:text-blue-300 transition-colors">{categoria.nome}</div>
-                              {categoria.descricao && (
-                                <div className="text-slate-400 text-xs group-hover:text-slate-300 transition-colors">{categoria.descricao}</div>
-                              )}
-                            </div>
-                          </button>
-                        ))}
-                        {!categoriaExiste && buscaCategoria.trim() && (
+                    {/* Sempre mostrar todas as categorias cadastradas, independente do tipo */}
+                    {(() => {
+                      const todasCategorias = categoriasFinanceiras || []
+                      const categoriasParaMostrar = buscaCategoria.trim() 
+                        ? categoriasFiltradas 
+                        : todasCategorias
+                      
+                      if (categoriasParaMostrar.length > 0) {
+                        return (
+                          <>
+                            {/* Mostrar todas as categorias cadastradas */}
+                            {categoriasParaMostrar.map((categoria) => (
+                              <button
+                                key={categoria.id}
+                                type="button"
+                                onClick={() => {
+                                  setFormDataTransacao({ ...formDataTransacao, categoria: categoria.nome })
+                                  setBuscaCategoria(categoria.nome)
+                                  setMostrarSugestoesCategoria(false)
+                                }}
+                                className="w-full text-left px-4 py-3.5 hover:bg-blue-500/20 transition-all duration-200 flex items-center gap-3 border-b border-slate-700/40 last:border-b-0 group"
+                              >
+                                <Tag className="text-blue-400 group-hover:text-blue-300 transition-colors" size={18} />
+                                <div className="flex-1">
+                                  <div className="text-white font-semibold group-hover:text-blue-300 transition-colors">{categoria.nome}</div>
+                                  {categoria.descricao && (
+                                    <div className="text-slate-400 text-xs group-hover:text-slate-300 transition-colors">{categoria.descricao}</div>
+                                  )}
+                                </div>
+                              </button>
+                            ))}
+                            {/* Opção de criar nova categoria quando há busca e não existe */}
+                            {!categoriaExiste && buscaCategoria.trim() && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setNovaCategoriaNome(buscaCategoria.trim())
+                                  setMostrarModalNovaCategoria(true)
+                                  setMostrarSugestoesCategoria(false)
+                                }}
+                                className="w-full text-left px-4 py-3.5 hover:bg-blue-500/30 transition-all duration-200 flex items-center gap-3 border-t-2 border-blue-500/50 bg-gradient-to-r from-blue-500/10 to-cyan-500/10"
+                              >
+                                <Plus className="text-blue-400 group-hover:text-blue-300 transition-colors" size={18} />
+                                <div className="flex-1">
+                                  <div className="text-blue-400 group-hover:text-blue-300 font-bold transition-colors">Criar "{buscaCategoria.trim()}"</div>
+                                  <div className="text-slate-400 group-hover:text-slate-300 text-xs transition-colors">Nova categoria financeira</div>
+                                </div>
+                              </button>
+                            )}
+                          </>
+                        )
+                      } else if (buscaCategoria.trim()) {
+                        // Se há busca mas não encontrou nada, mostrar opção de criar
+                        return (
                           <button
                             type="button"
                             onClick={() => {
@@ -2207,7 +2606,7 @@ export default function FincorePage() {
                               setMostrarModalNovaCategoria(true)
                               setMostrarSugestoesCategoria(false)
                             }}
-                            className="w-full text-left px-4 py-3.5 hover:bg-blue-500/30 transition-all duration-200 flex items-center gap-3 border-t-2 border-blue-500/50 bg-gradient-to-r from-blue-500/10 to-cyan-500/10"
+                            className="w-full text-left px-4 py-3.5 hover:bg-blue-500/30 transition-all duration-200 flex items-center gap-3 group"
                           >
                             <Plus className="text-blue-400 group-hover:text-blue-300 transition-colors" size={18} />
                             <div className="flex-1">
@@ -2215,29 +2614,16 @@ export default function FincorePage() {
                               <div className="text-slate-400 group-hover:text-slate-300 text-xs transition-colors">Nova categoria financeira</div>
                             </div>
                           </button>
-                        )}
-                      </>
-                    ) : buscaCategoria.trim() ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setNovaCategoriaNome(buscaCategoria.trim())
-                          setMostrarModalNovaCategoria(true)
-                          setMostrarSugestoesCategoria(false)
-                        }}
-                        className="w-full text-left px-4 py-3.5 hover:bg-blue-500/30 transition-all duration-200 flex items-center gap-3 group"
-                      >
-                        <Plus className="text-blue-400 group-hover:text-blue-300 transition-colors" size={18} />
-                        <div className="flex-1">
-                          <div className="text-blue-400 group-hover:text-blue-300 font-bold transition-colors">Criar "{buscaCategoria.trim()}"</div>
-                          <div className="text-slate-400 group-hover:text-slate-300 text-xs transition-colors">Nova categoria de {formDataTransacao.tipo === 'receita' ? 'receita' : 'despesa'}</div>
-                        </div>
-                      </button>
-                    ) : (
-                      <div className="px-4 py-3 text-slate-400 text-sm text-center">
-                        {formDataTransacao.tipo ? `Digite para buscar ou criar uma categoria de ${formDataTransacao.tipo}` : 'Selecione o tipo primeiro'}
-                      </div>
-                    )}
+                        )
+                      } else {
+                        // Se não há categorias cadastradas e campo está vazio
+                        return (
+                          <div className="px-4 py-3 text-slate-400 text-sm text-center">
+                            Nenhuma categoria cadastrada. Digite para criar uma nova categoria.
+                          </div>
+                        )
+                      }
+                    })()}
                   </div>
                 )}
               </div>
@@ -2270,16 +2656,32 @@ export default function FincorePage() {
 
             {formDataTransacao.periodicidade === 'parcelada' && (
               <div>
-                <label className="block text-slate-300 text-sm mb-2.5 font-semibold tracking-wide">Quantidade de Parcelas</label>
-              <input
+                <label className="block text-slate-300 text-sm mb-2.5 font-semibold tracking-wide">
+                  Quantidade de Parcelas
+                  <span className="text-red-400 ml-1">*</span>
+                </label>
+                <input
                   type="number"
                   min="1"
+                  max="360"
+                  step="1"
                   value={formDataTransacao.quantidadeParcelas || ''}
-                  onChange={(e) => setFormDataTransacao({ ...formDataTransacao, quantidadeParcelas: parseInt(e.target.value) || undefined })}
+                  onChange={(e) => {
+                    const valor = e.target.value
+                    // Garantir que seja um número inteiro válido
+                    const numero = valor === '' ? undefined : Math.max(1, Math.floor(Number(valor)) || 1)
+                    setFormDataTransacao({ ...formDataTransacao, quantidadeParcelas: numero })
+                  }}
                   className="w-full bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-2 border-slate-600/60 rounded-xl px-4 py-3.5 text-white text-base font-medium placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/80 focus:shadow-lg focus:shadow-blue-500/20 transition-all duration-200 hover:border-slate-500/80"
-                  placeholder="Ex: 12"
-              />
-            </div>
+                  placeholder="Ex: 4"
+                  required
+                />
+                {formDataTransacao.quantidadeParcelas && (
+                  <p className="text-slate-400 text-xs mt-1">
+                    Serão criadas {formDataTransacao.quantidadeParcelas} parcela(s)
+                  </p>
+                )}
+              </div>
             )}
 
             {(formDataTransacao.periodicidade && formDataTransacao.periodicidade !== 'unica') && (
@@ -2582,6 +2984,89 @@ export default function FincorePage() {
             </div>
           </div>
         )}
+
+        {/* Modal de Configuração da Reserva de Emergência */}
+        <Modal
+          isOpen={mostrarModalConfigReserva}
+          onClose={() => setMostrarModalConfigReserva(false)}
+          title="Configurar Reserva de Emergência"
+          size="md"
+        >
+          <div className="space-y-6">
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+              <p className="text-sm text-slate-300">
+                Configure o percentual do saldo que entra (receitas) que será destinado para a reserva de emergência. 
+                Você pode definir percentuais diferentes para receitas pessoais e empresariais.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-slate-300 text-sm mb-2.5 font-semibold tracking-wide">
+                  Percentual para Receitas Pessoais (%)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={percentualPessoal}
+                  onChange={(e) => setPercentualPessoal(Number(e.target.value))}
+                  className="w-full bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-2 border-slate-600/60 rounded-xl px-4 py-3.5 text-white text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/80 focus:shadow-lg focus:shadow-blue-500/20 transition-all duration-200 hover:border-slate-500/80"
+                  placeholder="Ex: 10"
+                />
+                <p className="text-xs text-slate-400 mt-1">
+                  {percentualPessoal > 0 && totalReceitasPessoal > 0 && (
+                    <>Reserva calculada: {formatCurrency((totalReceitasPessoal * percentualPessoal) / 100)}</>
+                  )}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 text-sm mb-2.5 font-semibold tracking-wide">
+                  Percentual para Receitas Empresa (%)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={percentualEmpresa}
+                  onChange={(e) => setPercentualEmpresa(Number(e.target.value))}
+                  className="w-full bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-2 border-slate-600/60 rounded-xl px-4 py-3.5 text-white text-base font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/60 focus:border-purple-500/80 focus:shadow-lg focus:shadow-purple-500/20 transition-all duration-200 hover:border-slate-500/80"
+                  placeholder="Ex: 10"
+                />
+                <p className="text-xs text-slate-400 mt-1">
+                  {percentualEmpresa > 0 && totalReceitasEmpresa > 0 && (
+                    <>Reserva calculada: {formatCurrency((totalReceitasEmpresa * percentualEmpresa) / 100)}</>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4 border-t border-slate-700/50">
+              <button
+                onClick={() => setMostrarModalConfigReserva(false)}
+                className="flex-1 px-4 py-3 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 text-white rounded-xl transition-all font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  updateReservaEmergencia({
+                    percentualPessoal,
+                    percentualEmpresa,
+                  })
+                  setMostrarModalConfigReserva(false)
+                }}
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl transition-all font-medium shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2"
+              >
+                <Save size={18} />
+                Salvar Configuração
+              </button>
+            </div>
+          </div>
+        </Modal>
       </div>
     </Layout>
   )

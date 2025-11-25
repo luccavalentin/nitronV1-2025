@@ -119,12 +119,11 @@ export interface Transacao {
   data: Date
   projetoId?: string
   clienteId?: string
+  target?: 'pessoal' | 'empresa' // Target para receitas e despesas
   periodicidade?: 'unica' | 'mensal' | 'bimestral' | 'trimestral' | 'semestral' | 'anual' | 'parcelada'
   quantidadeParcelas?: number
   dataInicio?: Date
   status?: 'pendente' | 'recebido' | 'pago' | 'cancelado'
-  parcelaAtual?: number
-  transacaoPaiId?: string // ID da transação original que gerou as parcelas
   parcelaAtual?: number
   transacaoPaiId?: string // ID da transação original que gerou as parcelas
 }
@@ -278,6 +277,14 @@ export interface Configuracoes {
   pomodoroPausaLongaApos: number // número de pomodoros antes da pausa longa
 }
 
+export interface ReservaEmergencia {
+  percentualPessoal: number // Percentual do saldo que entra para reserva pessoal
+  percentualEmpresa: number // Percentual do saldo que entra para reserva empresa
+  valorTotalPessoal: number // Valor total acumulado na reserva pessoal
+  valorTotalEmpresa: number // Valor total acumulado na reserva empresa
+  dataAtualizacao: Date
+}
+
 export interface CategoriaFinanceira {
   id: string
   nome: string
@@ -285,19 +292,34 @@ export interface CategoriaFinanceira {
   dataCriacao: Date
 }
 
-export interface Acordo {
+export interface Divida {
   id: string
   descricao: string
   credor: string
-  valorOriginal: number
-  valorAcordado: number
+  valorTotal: number
+  prazo: number // em meses
+  taxaJuros: number // percentual ao mês
+  dataVencimento: Date
+  status: 'ativa' | 'quitada' | 'cancelada' | 'em_acordo'
+  observacoes?: string
+  dataCriacao: Date
+  dataAtualizacao: Date
+}
+
+export interface Acordo {
+  id: string
+  dividaId: string // Vinculado à dívida original
+  descricao: string
+  credor: string
+  valorOriginal: number // Valor da dívida original
+  valorAcordado: number // Valor total do acordo (com juros)
   valorParcela: number
   quantidadeParcelas: number
   parcelaAtual: number
+  taxaJuros: number // Taxa de juros do acordo
   dataInicio: Date
   dataVencimento: Date
   status: 'ativo' | 'quitado' | 'cancelado' | 'atrasado'
-  renegociado: boolean
   observacoes?: string
   dataCriacao: Date
   dataAtualizacao: Date
@@ -322,7 +344,9 @@ interface Store {
   aulas: Aula[]
   configuracoes: Configuracoes
   categoriasFinanceiras: CategoriaFinanceira[]
+  dividas: Divida[]
   acordos: Acordo[]
+  reservaEmergencia: ReservaEmergencia
   
   // Actions
   setClientes: (clientes: Cliente[]) => void
@@ -409,11 +433,21 @@ interface Store {
   updateCategoriaFinanceira: (id: string, categoria: Partial<CategoriaFinanceira>) => void
   deleteCategoriaFinanceira: (id: string) => void
   
+  // Dívidas
+  setDividas: (dividas: Divida[]) => void
+  addDivida: (divida: Divida) => void
+  updateDivida: (id: string, divida: Partial<Divida>) => void
+  deleteDivida: (id: string) => void
+  
   // Acordos
   setAcordos: (acordos: Acordo[]) => void
   addAcordo: (acordo: Acordo) => void
   updateAcordo: (id: string, acordo: Partial<Acordo>) => void
   deleteAcordo: (id: string) => void
+  
+  // Reserva de Emergência
+  setReservaEmergencia: (reserva: ReservaEmergencia) => void
+  updateReservaEmergencia: (reserva: Partial<ReservaEmergencia>) => void
   
   // Initialize mock data
   initializeMockData: () => void
@@ -652,7 +686,15 @@ export const useStore = create<Store>()(
   materias: [],
   aulas: [],
       categoriasFinanceiras: [],
+      dividas: [],
       acordos: [],
+      reservaEmergencia: {
+        percentualPessoal: 10, // 10% padrão
+        percentualEmpresa: 10, // 10% padrão
+        valorTotalPessoal: 0,
+        valorTotalEmpresa: 0,
+        dataAtualizacao: new Date(),
+      },
       configuracoes: {
     nome: 'Usuário',
     email: 'usuario@exemplo.com',
@@ -1014,6 +1056,16 @@ export const useStore = create<Store>()(
     }))
   },
 
+  // Dívidas
+  setDividas: (dividas) => set({ dividas: dividas || [] }),
+  addDivida: (divida) => set((state) => ({ dividas: [...(state.dividas || []), divida] })),
+  updateDivida: (id, divida) => set((state) => ({
+    dividas: (state.dividas || []).map((d) => (d.id === id ? { ...d, ...divida, dataAtualizacao: new Date() } : d)),
+  })),
+  deleteDivida: (id) => set((state) => ({
+    dividas: (state.dividas || []).filter((d) => d.id !== id),
+  })),
+  
   // Acordos
   setAcordos: (acordos) => set({ acordos }),
   addAcordo: (acordo) => set((state) => ({ acordos: [...(state.acordos || []), acordo] })),
@@ -1022,6 +1074,12 @@ export const useStore = create<Store>()(
   })),
   deleteAcordo: (id) => set((state) => ({
     acordos: (state.acordos || []).filter((a) => a.id !== id),
+  })),
+
+  // Reserva de Emergência
+  setReservaEmergencia: (reserva) => set({ reservaEmergencia: reserva }),
+  updateReservaEmergencia: (reserva) => set((state) => ({
+    reservaEmergencia: { ...state.reservaEmergencia, ...reserva, dataAtualizacao: new Date() },
   })),
 
   // Initialize mock data - Limpo para começar do zero
@@ -1034,6 +1092,7 @@ export const useStore = create<Store>()(
       versoes: [],
       transacoes: [],
       categoriasFinanceiras: [],
+      dividas: [],
       acordos: [],
       lancamentos: [],
       orcamentos: [],
@@ -1092,6 +1151,14 @@ export const useStore = create<Store>()(
         temasEstudo: state.temasEstudo,
         materias: state.materias,
         aulas: state.aulas,
+      categoriasFinanceiras: state.categoriasFinanceiras,
+      dividas: state.dividas,
+      acordos: state.acordos,
+      reservaEmergencia: state.reservaEmergencia,
+        conversasIA: state.conversasIA,
+        conversaAtivaId: state.conversaAtivaId,
+        arquivosWorkspace: state.arquivosWorkspace,
+        arquivoSelecionadoId: state.arquivoSelecionadoId,
         configuracoes: state.configuracoes,
       }),
       onRehydrateStorage: () => (state) => {

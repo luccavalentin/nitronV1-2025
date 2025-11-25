@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Layout from '@/components/Layout'
 import { useStore } from '@/store/useStore'
 import { Plus, Edit, Trash2, TrendingUp, TrendingDown, Download, Search, Filter, DollarSign, Target, BarChart3, PieChart, LineChart, Calendar, Eye, EyeOff, ArrowRight, Briefcase, User, Tag, AlertCircle, CheckCircle2, Clock, Activity } from 'lucide-react'
@@ -18,24 +18,43 @@ export default function FinanceiroPage() {
   const [valoresVisiveis, setValoresVisiveis] = useState(true)
   const [periodo, setPeriodo] = useState<string>('6meses')
 
-  const transacoesFiltradas = transacoes.filter((transacao) => {
-    const matchTipo = filtroTipo === 'todos' || transacao.tipo === filtroTipo
-    const matchProjeto = filtroProjeto === 'todos' || transacao.projetoId === filtroProjeto
-    const matchCliente = filtroCliente === 'todos' || transacao.clienteId === filtroCliente
-    const matchCategoria = filtroCategoria === 'todas' || transacao.categoria === filtroCategoria
-    const matchDataInicial = !dataInicial || new Date(transacao.data) >= new Date(dataInicial)
-    const matchDataFinal = !dataFinal || new Date(transacao.data) <= new Date(dataFinal)
-    return matchTipo && matchProjeto && matchCliente && matchCategoria && matchDataInicial && matchDataFinal
-  })
+  const transacoesFiltradas = useMemo(() => {
+    return transacoes.filter((transacao) => {
+      const matchTipo = filtroTipo === 'todos' || transacao.tipo === filtroTipo
+      const matchProjeto = filtroProjeto === 'todos' || transacao.projetoId === filtroProjeto
+      const matchCliente = filtroCliente === 'todos' || transacao.clienteId === filtroCliente
+      const matchCategoria = filtroCategoria === 'todas' || transacao.categoria === filtroCategoria
+      const matchDataInicial = !dataInicial || new Date(transacao.data) >= new Date(dataInicial)
+      const matchDataFinal = !dataFinal || new Date(transacao.data) <= new Date(dataFinal)
+      return matchTipo && matchProjeto && matchCliente && matchCategoria && matchDataInicial && matchDataFinal
+    })
+  }, [transacoes, filtroTipo, filtroProjeto, filtroCliente, filtroCategoria, dataInicial, dataFinal])
 
-  const totalReceitas = transacoesFiltradas
-    .filter((t) => t.tipo === 'receita')
-    .reduce((sum, t) => sum + t.valor, 0)
-  const totalDespesas = transacoesFiltradas
-    .filter((t) => t.tipo === 'despesa')
-    .reduce((sum, t) => sum + t.valor, 0)
-  const saldo = totalReceitas - totalDespesas
-  const margemLucro = totalReceitas > 0 ? ((saldo / totalReceitas) * 100) : 0
+  const valoresCards = useMemo(() => {
+    const receitasFiltradas = transacoesFiltradas.filter((t) => t.tipo === 'receita')
+    const receitasPessoais = receitasFiltradas.filter((t) => !t.target || t.target === 'pessoal')
+    const receitasEmpresa = receitasFiltradas.filter((t) => t.target === 'empresa')
+    
+    const totalReceitasPessoais = receitasPessoais.reduce((sum, t) => sum + t.valor, 0)
+    const totalReceitasEmpresa = receitasEmpresa.reduce((sum, t) => sum + t.valor, 0)
+    const totalReceitas = totalReceitasPessoais + totalReceitasEmpresa
+    const totalDespesas = transacoesFiltradas
+      .filter((t) => t.tipo === 'despesa')
+      .reduce((sum, t) => sum + t.valor, 0)
+    const saldo = totalReceitas - totalDespesas
+    const margemLucro = totalReceitas > 0 ? ((saldo / totalReceitas) * 100) : 0
+
+    return {
+      totalReceitasPessoais,
+      totalReceitasEmpresa,
+      totalReceitas,
+      totalDespesas,
+      saldo,
+      margemLucro
+    }
+  }, [transacoesFiltradas])
+
+  const { totalReceitasPessoais, totalReceitasEmpresa, totalReceitas, totalDespesas, saldo, margemLucro } = valoresCards
 
   // Cálculos de crescimento
   const receitaAnterior = 20000
@@ -156,29 +175,79 @@ export default function FinanceiroPage() {
         </div>
 
         {/* Métricas Principais - Design Premium Inspirado */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 md:gap-6 max-w-7xl mx-auto">
-          {/* Receita Total - Design Premium */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5 md:gap-6 max-w-7xl mx-auto">
+          {/* Botão de Ocultar/Mostrar Valores */}
+          <div className="lg:col-span-5 flex justify-end mb-2">
+            <button
+              onClick={() => setValoresVisiveis(!valoresVisiveis)}
+              className="px-4 py-2 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 text-slate-300 rounded-lg transition-all text-sm font-medium flex items-center gap-2"
+              title={valoresVisiveis ? 'Ocultar valores' : 'Mostrar valores'}
+            >
+              {valoresVisiveis ? (
+                <>
+                  <EyeOff className="text-slate-300" size={18} />
+                  Ocultar Valores
+                </>
+              ) : (
+                <>
+                  <Eye className="text-slate-300" size={18} />
+                  Mostrar Valores
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Receitas Pessoais - Design Premium */}
+          <div className="relative bg-gradient-to-br from-blue-950/40 via-slate-800 to-slate-900 rounded-xl sm:rounded-2xl p-5 sm:p-6 border-2 border-blue-500/50 shadow-xl shadow-blue-500/20 hover:shadow-2xl hover:shadow-blue-500/30 hover:border-blue-400/70 hover:scale-[1.02] transition-all duration-300 group overflow-hidden">
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-transparent to-transparent"></div>
+            </div>
+            <div className="relative z-10 flex items-start justify-between mb-4">
+              <div className="p-3 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform duration-300">
+                <User className="text-white" size={24} strokeWidth={2.5} />
+              </div>
+            </div>
+            <div className="relative z-10 space-y-2">
+              <div className="text-blue-300/80 text-xs sm:text-sm font-semibold uppercase tracking-wide">Receitas Pessoais</div>
+              <div className="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-tight">
+                {valoresVisiveis ? formatCurrency(totalReceitasPessoais) : '••••••'}
+              </div>
+              <div className="pt-2 text-xs text-slate-400">
+                {transacoesFiltradas.filter(t => t.tipo === 'receita' && (!t.target || t.target === 'pessoal')).length} transação(ões)
+              </div>
+            </div>
+          </div>
+
+          {/* Receitas Empresa - Design Premium */}
+          <div className="relative bg-gradient-to-br from-purple-950/40 via-slate-800 to-slate-900 rounded-xl sm:rounded-2xl p-5 sm:p-6 border-2 border-purple-500/50 shadow-xl shadow-purple-500/20 hover:shadow-2xl hover:shadow-purple-500/30 hover:border-purple-400/70 hover:scale-[1.02] transition-all duration-300 group overflow-hidden">
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 via-transparent to-transparent"></div>
+            </div>
+            <div className="relative z-10 flex items-start justify-between mb-4">
+              <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform duration-300">
+                <Briefcase className="text-white" size={24} strokeWidth={2.5} />
+              </div>
+            </div>
+            <div className="relative z-10 space-y-2">
+              <div className="text-purple-300/80 text-xs sm:text-sm font-semibold uppercase tracking-wide">Receitas Empresa</div>
+              <div className="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-tight">
+                {valoresVisiveis ? formatCurrency(totalReceitasEmpresa) : '••••••'}
+              </div>
+              <div className="pt-2 text-xs text-slate-400">
+                {transacoesFiltradas.filter(t => t.tipo === 'receita' && t.target === 'empresa').length} transação(ões)
+              </div>
+            </div>
+          </div>
+
+          {/* Total Receitas - Design Premium */}
           <div className="relative bg-gradient-to-br from-green-950/40 via-slate-800 to-slate-900 rounded-xl sm:rounded-2xl p-5 sm:p-6 border-2 border-green-500/50 shadow-xl shadow-green-500/20 hover:shadow-2xl hover:shadow-green-500/30 hover:border-green-400/70 hover:scale-[1.02] transition-all duration-300 group overflow-hidden">
-            {/* Efeito de brilho no hover */}
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
               <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 via-transparent to-transparent"></div>
             </div>
-            
             <div className="relative z-10 flex items-start justify-between mb-4">
               <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg shadow-green-500/30 group-hover:scale-110 transition-transform duration-300">
                 <TrendingUp className="text-white" size={24} strokeWidth={2.5} />
               </div>
-              <button
-                onClick={() => setValoresVisiveis(!valoresVisiveis)}
-                className="p-1.5 hover:bg-green-500/20 rounded-lg transition-colors z-20"
-                title={valoresVisiveis ? 'Ocultar valores' : 'Mostrar valores'}
-              >
-                {valoresVisiveis ? (
-                  <Eye className="text-green-400 hover:text-green-300" size={18} />
-                ) : (
-                  <EyeOff className="text-green-400 hover:text-green-300" size={18} />
-                )}
-              </button>
             </div>
             <div className="relative z-10 space-y-2">
               <div className="text-green-300/80 text-xs sm:text-sm font-semibold uppercase tracking-wide">Total Receitas</div>
