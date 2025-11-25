@@ -2589,7 +2589,7 @@ export default function FincorePage() {
                               >
                                 <Plus className="text-blue-400 group-hover:text-blue-300 transition-colors" size={18} />
                                 <div className="flex-1">
-                                  <div className="text-blue-400 group-hover:text-blue-300 font-bold transition-colors">Criar "{buscaCategoria.trim()}"</div>
+                                  <div className="text-blue-400 group-hover:text-blue-300 font-bold transition-colors">Criar &quot;{buscaCategoria.trim()}&quot;</div>
                                   <div className="text-slate-400 group-hover:text-slate-300 text-xs transition-colors">Nova categoria financeira</div>
                                 </div>
                               </button>
@@ -2610,7 +2610,7 @@ export default function FincorePage() {
                           >
                             <Plus className="text-blue-400 group-hover:text-blue-300 transition-colors" size={18} />
                             <div className="flex-1">
-                              <div className="text-blue-400 group-hover:text-blue-300 font-bold transition-colors">Criar "{buscaCategoria.trim()}"</div>
+                              <div className="text-blue-400 group-hover:text-blue-300 font-bold transition-colors">Criar &quot;{buscaCategoria.trim()}&quot;</div>
                               <div className="text-slate-400 group-hover:text-slate-300 text-xs transition-colors">Nova categoria financeira</div>
                             </div>
                           </button>
