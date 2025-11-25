@@ -2229,7 +2229,7 @@ export default function FincorePage() {
 
                           {/* Versão Mobile - Card */}
                           <div 
-                            key={`${transacao.id}-mobile`}
+                            key={transacao.id + '-mobile'}
                             className={`md:hidden p-4 border-b-2 border-slate-300 ${
                               transacoesSelecionadas.has(transacao.id) ? 'bg-red-100/50 border-red-400' : 'bg-white'
                             }`}
