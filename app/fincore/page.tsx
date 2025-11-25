@@ -1695,7 +1695,7 @@ export default function FincorePage() {
                             </div>
                           <div className="flex items-center justify-center gap-2 text-slate-900 font-bold text-sm border-r-2 border-slate-300 pr-4">
                             <Calendar size={14} className="text-slate-700" />
-                                {format(new Date(transacao.data), "dd/MM/yyyy")}
+                                {format(new Date(transacao.data), 'dd/MM/yyyy')}
                           </div>
                           
                           <div className="text-slate-900 font-bold text-sm text-center break-words whitespace-normal border-r-2 border-slate-300 pr-4">
@@ -2133,7 +2133,7 @@ export default function FincorePage() {
                             </div>
                             <div className="flex items-center justify-center gap-2 text-slate-900 font-bold text-sm border-r-2 border-slate-300 pr-4">
                               <Calendar size={16} className="text-slate-700" />
-                              <span className="whitespace-nowrap">{format(new Date(transacao.data), "dd/MM/yyyy")}</span>
+                              <span className="whitespace-nowrap">{format(new Date(transacao.data), 'dd/MM/yyyy')}</span>
                             </div>
                             
                             <div className="text-slate-900 font-bold text-sm text-center break-words border-r-2 border-slate-300 pr-4">
@@ -2242,7 +2242,7 @@ export default function FincorePage() {
                                   <div className="text-slate-900 font-bold text-sm mb-1">{transacao.descricao}</div>
                                   <div className="flex items-center gap-2 text-xs text-slate-700 font-semibold">
                                     <Calendar size={12} />
-                                    {format(new Date(transacao.data), "dd/MM/yyyy")}
+                                    {format(new Date(transacao.data), 'dd/MM/yyyy')}
                       </div>
                     </div>
                 </div>
