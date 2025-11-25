@@ -47,6 +47,10 @@ export default function FincorePage() {
   const [percentualPessoal, setPercentualPessoal] = useState(reservaEmergencia?.percentualPessoal || 10)
   const [percentualEmpresa, setPercentualEmpresa] = useState(reservaEmergencia?.percentualEmpresa || 10)
 
+  // Constantes para mensagens de confirmação
+  const MSG_CONFIRMAR_EXCLUSAO_DESPESA = 'Tem certeza que deseja excluir esta despesa?'
+  const MSG_CONFIRMAR_EXCLUSAO_RECEITA = 'Tem certeza que deseja excluir esta receita?'
+
   // Filtros para transações
   const transacoesFiltradas = transacoes.filter((transacao) => {
     const matchBusca = transacao.descricao.toLowerCase().includes(busca.toLowerCase()) ||
@@ -1771,7 +1775,7 @@ export default function FincorePage() {
                             </button>
                             <button
                               onClick={() => {
-                                if (confirm('Tem certeza que deseja excluir esta receita?')) {
+                                if (confirm(MSG_CONFIRMAR_EXCLUSAO_RECEITA)) {
                                   deleteTransacao(transacao.id)
                                 }
                               }}
@@ -2211,7 +2215,7 @@ export default function FincorePage() {
                             </button>
                             <button
                               onClick={() => {
-                                if (confirm('Tem certeza que deseja excluir esta despesa?')) {
+                                if (confirm(MSG_CONFIRMAR_EXCLUSAO_DESPESA)) {
                                   deleteTransacao(transacao.id)
                                 }
                               }}
@@ -2309,7 +2313,7 @@ export default function FincorePage() {
                               </button>
                               <button
                                 onClick={() => {
-                                  if (confirm('Tem certeza que deseja excluir esta despesa?')) {
+                                  if (confirm(MSG_CONFIRMAR_EXCLUSAO_DESPESA)) {
                                     deleteTransacao(transacao.id)
                                   }
                                 }}
