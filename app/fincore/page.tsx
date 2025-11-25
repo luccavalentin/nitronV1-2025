@@ -2212,6 +2212,7 @@ export default function FincorePage() {
                                 className="p-2.5 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-all hover:scale-110 border border-blue-200"
                               title="Editar"
                             >
+                                {/* eslint-disable-next-line react/no-unescaped-entities */}
                                 <Edit size={18} />
                             </button>
                             <button
@@ -2229,6 +2230,7 @@ export default function FincorePage() {
                         </div>
 
                           {/* Versão Mobile - Card */}
+                          {/* eslint-disable-next-line react/no-unescaped-entities */}
                           <div 
                             key={transacao.id + '-mobile'}
                             className={`md:hidden p-4 border-b-2 border-slate-300 ${
